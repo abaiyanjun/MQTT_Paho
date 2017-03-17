@@ -42,11 +42,8 @@
 /*ip and port*/
 //#define         AT_CMD_IP					"\"116.228.171.27\""
 //#define			AT_CMD_PORT				"\"6800\""
-//#define         AT_CMD_IP					"\"113.59.226.244\""
-//#define			AT_CMD_PORT				"\"1883\""
-
-#define         AT_CMD_IP					"\"114.55.42.28\""
-#define			AT_CMD_PORT				"\"25500\""
+#define         AT_CMD_IP					"\"113.59.226.244\""
+#define			AT_CMD_PORT				"\"1883\""
 
 
 

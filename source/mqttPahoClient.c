@@ -234,8 +234,6 @@ void clientInit(void)
 	
     ConnectNetwork(&n, MQTT_BROKER_NAME, MQTT_PORT);
 #endif
-
-#if 1 //byj
     MQTTClient(&c, &n, 1000, buf, CLIENT_BUFF_SIZE, readbuf, CLIENT_BUFF_SIZE);
 
     /* Configure the MQTT Connection Data */
@@ -250,7 +248,7 @@ void clientInit(void)
 
     /* Connect to the MQTT Broker */
     rc = MQTTConnect(&c, &data);
-#endif //byj 
+
 #if 0
 	/* Set Subscribe Topic Strings */
 	memset(clientTopicRed, 0x00, CLIENT_BUFF_SIZE);
@@ -273,7 +271,6 @@ void clientInit(void)
 	sprintf((char*) clientTopicDataStream, TOPIC_DATA_STREAM, (const char*) MQTT_CLIENT_ID);
 	clientTopicDataStream_ptr = (char*) clientTopicDataStream;
 #endif
-#if 1 //byj 
 	/* Subscribe to the Topics (set callback functions) */
     rc = MQTTSubscribe(&c, "topic", QOS0, clientRecv);//clientTopicRed_ptr
    // rc = MQTTSubscribe(&c, clientTopicOrange_ptr, QOS0, clientRecv);
@@ -297,7 +294,7 @@ void clientInit(void)
     {
     	clientDeinit();
     }
-#endif 	
+	
 #if 1//def LIFT_CHECK //byj
 	/* Create Live Data Check */
     liftCheckTimerHandle = xTimerCreate(

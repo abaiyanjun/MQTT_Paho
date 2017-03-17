@@ -316,7 +316,6 @@ Cat1_return_t send_send_cmd(uint8_t *cmdSend , uint8_t *cmdRecv,int timeoutMs)
 		}
 
 		ret = receive_data_from_device(cmdRecv);
-		//printf("-------cmdRecv3-------\n%s\n",cmdRecv);
 
 		if (ret == Cat1_STATUS_SUCCESS) {
 			str = strstr(cmdRecv, "AT^SISH=0");

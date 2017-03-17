@@ -418,60 +418,7 @@ Cat1_return_t cat1_send(uint16_t *buf, uint16_t len)
 	}	
 }
 
-Cat1_return_t cat1_send_raw(uint16_t *buf, uint16_t len)
-{
-	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
-	char *token = NULL;  
-	uint8_t buffer[400];
-	uint8_t  data_buf[800];
-	memset(buffer,0,sizeof(buffer));
-	memset(cmdRecv,0,sizeof(cmdRecv));
-	memset(data_buf,0,sizeof(data_buf));
-	
 
-	
-	Characters_Converts_Hex(buffer,buf,len);
-
-    sprintf(data_buf,AT_CMD_SENDDATA_CHARACTER,buffer);
-
-	DBG("-------start-------%d\n%s",strlen(data_buf),data_buf);
-
-	ret = send_send_cmd(data_buf,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------%d\n%s",strlen(data_buf),data_buf);
-	DBG("len[%d]\n",len);
-	DBG("-------cmdRecv444-------\n%s\n",cmdRecv);
-
-	if(len > Cat1_RX_BUFFER_SIZE){
-		printf(" the data is overflow!\n");
-		return Cat1_STATUS_FAILED;
-	}else{
-		if (ret == Cat1_STATUS_TIMEOUT) {
-			return ret;
-			
-		} else if (ret == Cat1_STATUS_SUCCESS) {
-
-			DBG("-------cmdRecv-------\n%s\n",cmdRecv);
-
-			token = strtok(cmdRecv, "\r\n");
-			char *atCmd = token;  
-			if (token != NULL) {  
-				token = strtok(NULL, "\r\n");  
-			}  
-			char *status = token;  
-				
-			DBG("atCmd[%s],status[%s]\n", atCmd, status);
-			
-			if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
-				return Cat1_STATUS_SUCCESS;
-			} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
-				return Cat1_STATUS_FAILED;
-			} else {
-				return Cat1_STATUS_INVALID_PARMS;
-			}
-		}
-	}	
-}
 
 /*
 * @brief receive the data from the serve
@@ -498,7 +445,7 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv1-------\n%s\n",cmdRecv);
+		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
 
 		token = strtok(cmdRecv, "\r\n");
 		char *atCmd = token;
@@ -521,7 +468,7 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 		
 		Characters_Converts_char(buf,Cmddata2,strlen(Cmddata2));
 		*len = strlen(buf);
-		DBG("-------cmdRecv2-------\n%s\n",Cmddata2);
+		DBG("-------cmdRecv-------\n%s\n",Cmddata2);
 
 		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
 			return Cat1_STATUS_SUCCESS;

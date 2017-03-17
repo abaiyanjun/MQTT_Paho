@@ -46,13 +46,8 @@
 /* own header files */
 #include "mqttXDK.h"
 
-//#define MQTT_BROKER_NAME    "113.59.226.244"  /**< MQTT Broker */
-//#define MQTT_PORT           1883                          /**< MQTT Port Number */
-
-#define MQTT_BROKER_NAME    "114.55.42.28"  /**< MQTT Broker */
-#define MQTT_PORT           25500                          /**< MQTT Port Number */
-
-
+#define MQTT_BROKER_NAME    "113.59.226.244"  /**< MQTT Broker */
+#define MQTT_PORT           1883                          /**< MQTT Port Number */
 #define WIFI_RESET_THRESHOLD 1800
 #define AT_BASE_LENGTH 27
 #define TIME_OUT   5000
