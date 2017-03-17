@@ -501,7 +501,8 @@ int lastNormalSpeed = 0;
 
 int wsTimer = 0;
 int timers[14] = { 0 };
-int timerThreshhold[14] = { 30, 60, 30, 300, 60, 30, 30, 30, 30, 30, 20, 30, 30, 30 }; //default values, change Td to 300, JC, 20160430
+//byj int timerThreshhold[14] = { 30, 60, 30, 300, 60, 30, 30, 30, 30, 30, 20, 30, 30, 30 }; //default values, change Td to 300, JC, 20160430
+int timerThreshhold[14] = { 3, 6, 3, 30, 6, 3, 3, 3, 3, 3, 2, 3, 3, 3 }; //default values, change Td to 300, JC, 20160430
 ///////////////////////////Ta, Tb, Tc, Td,  Te, Tf, Tg, Th, Ti, Tj, Tk, Tl, Tm, Tn
 int time_StreamCloud = 300;
 int parent_id_StreamCloud_int = 0;
@@ -639,6 +640,44 @@ unsigned char T01[][TITEMLEN] ={
     {0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x7D},
     {0x00}
 };
+
+//A_STOP_OUT_AREA 	6//门区外停梯；
+unsigned char T02[][TITEMLEN] ={
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+	{0x7B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x7D},
+    {0x00}
+};
+
+
+
+
+
+
+
+
 
 
 char UartBuf[SOCKETBUFSIZE];
@@ -983,7 +1022,7 @@ int get_EStatus_nowStatus()//not used
 
 int get_EStatus_powerStatus()
 {
-	return 1;//GPIORead(S_POWER_STATUS);//GPC14(RGB_VD[6])?-->GPD2
+	return 0;//GPIORead(S_POWER_STATUS); 0 is normal 
 }
 
 int get_EStatus_doorStatus()
@@ -1199,6 +1238,7 @@ int clearFaultSent(int faultNUM)
 void setFault(int faultNUM)
 {
 	faultTypeIndi[faultNUM] = 1;
+	DEBUG("***********          Fault: %d        ******\n", faultNUM);	
 }
 
 int getFaultState(int faultNUM)
@@ -1459,13 +1499,19 @@ void checkElevatorFault_IO1(void)
 	}
 	*/
 
-	//A_OPEN_WITHOUT_STOPPIN 	5//?a??×?3μ￡?**
-
+	//----------------------------------------------------------------------
+	//A_OPEN_WITHOUT_STOPPIN
 	if(pElevatorStatus.EStatus_doorStatus == 1 && pElevatorStatus.EStatus_direction != 0)
 	{
     	setFault(A_OPEN_WITHOUT_STOPPIN);
     	DEBUG("Fault: A_OPEN_WITHOUT_STOPPIN!\n");
 	}
+
+	//----------------------------------------------------------------------
+	
+
+	//----------------------------------------------------------------------
+
 
 	//0:door closed; 1:door open, 0:in position, 1: not in position
 	if ((lastDoor == 1 && lastPosition == 0) && (status_doorStatus == 1 && status_inPosition != 0))
@@ -1582,6 +1628,560 @@ void checkElevatorFault_IO1(void)
 }
 
 
+/*
+ * @brief Allows to encode the provided content, leaving the output on
+ * the buffer allocated by the caller.
+ *
+ * (门区外停梯)、[超速]、运行中开门、(冲顶、蹲底)、开门走车、(停电、平层关人、非平层关人)
+ *
+ * @param(void)
+ *
+ * @return(void)
+ */
+
+int flag_hitceiling = 0;
+int flag_hitgroud = 0;
+
+/*
+ * @brief Allows to encode the provided content, leaving the output on
+ * the buffer allocated by the caller.
+ *
+ * @param(void)
+ *
+ * @return(void)
+ */
+void checkElevatorFault(void)
+{
+	int counttime = 0;
+	/*assign sensor data to local varibles*/
+	//entering mutex
+	int status_inPositionUp = pSensorsStatus.SStatus_inPositionUp;
+	int status_inPositionDown = pSensorsStatus.SStatus_inPositionDown;
+	int status_inPositionFlat = pSensorsStatus.SStatus_inPositionFlat;
+	int status_doorOpen = pSensorsStatus.SStatus_doorOpen;
+	//int status_havingPeople = pSensorsStatus.SStatus_havingPeople;
+	int status_inRepairing = pSensorsStatus.SStatus_inRepairing;
+	int status_alarmButtonPushed = pSensorsStatus.SStatus_alarmButtonPushed;  //pushed ==1
+	int status_safeCircuit = pSensorsStatus.SStatus_safeCircuit;
+	int status_runningContactor = pSensorsStatus.SStatus_runningContactor;
+	int status_generalContactor = pSensorsStatus.SStatus_generalContactor;
+	//leaving mutex
+
+	//getDirection();//in a thread or timer
+	//getFloorLevel();//in a thread or timer
+
+	//pElevatorStatus.EStatus_nowStatus = 0; //default normal
+	//pElevatorStatus.EStatus_powerStatus = 0;
+	//pElevatorStatus.EStatus_currentFloor = BaseFloor;
+
+	int status_powerStatus = pElevatorStatus.EStatus_powerStatus;
+  	int status_direction = pElevatorStatus.EStatus_direction;
+	int status_doorStatus = pElevatorStatus.EStatus_doorStatus;
+	int status_inPosition = pElevatorStatus.EStatus_inPosition;
+	float status_speed = pElevatorStatus.EStatus_speed;
+
+	int status_havingPeople = pElevatorStatus.EStatus_havingPeople;
+
+	int status_currentFloor = pElevatorStatus.EStatus_currentFloor;  //for A_HIT_CEILING
+
+	//int status_floorLevel = pElevatorStatus.EStatus_currentFloor;
+
+	//Is these enough for checking if a fault happens?
+
+	//DEBUG("Info: while-check A_STOP_OUT_AREA.\n");
+
+	DEBUG("+++Checking list+++\n \
+		powerStatus: %d,\n \
+		direction:%d,\n \
+		speed:%.2f,\n \
+		doorStatus:%d,\n \
+		inPosition:%d,\n \
+		inPositionBase:%d,\n \
+		havingPeople:%d,\n \
+		currentFloor:%d,\n \
+		inRepairing:%d,\n \
+		alarmButtonPushed:%d,\n \
+		safeCircuit:%d,\n" \
+		,status_powerStatus \
+		,status_direction \
+		,status_speed \
+		,status_doorStatus \
+		,status_inPosition \
+		,status_inPositionFlat \
+		,status_havingPeople \
+		,status_currentFloor \
+		,status_inRepairing \
+		,status_alarmButtonPushed \
+		,status_safeCircuit);
+
+//now_status 0-3 当前状态[0 正常 1 故障 2 平层关人 3 非平层关人]
+//direction 0-2 方向[0 停留 1 上行 2 下行]
+//floor_status 0-1 平层状态[0平层 1 非平层]
+//speed real 梯速
+//door_status 0-3 门状态[0 关门 1 开门 2 关门中 3 开门中]
+//has_people 0-1 人状态[0 无人 1 有人]
+//power_status 0-2 电力[0 电源 1 电池 2 其他]
+//now_floor int 当前楼层
+
+	//if(status_currentFloor == Lbase) currentFloorRefreshed = 1;//not valid in logic
+	//if(status_inRepairing == 0)
+	//{
+		if(currentFloorRefreshed == 1)
+		{
+			/*here to check if A_HIT_GROUND or A_HIT_CEILING occurs*/
+			if((status_currentFloor == Lmin)&&(status_direction == 2)&&(status_inPosition == 1)) //if(status_direction == 2) has chance to miss?
+			{//all 3 conditions will stay if this occurs
+				flag_hitgroud = 1;
+				flag_hitceiling = 0;
+				//INFO("IN: current floor, derection and inpostion are: %d, %d, %d\n",status_currentFloor,status_direction,status_inPosition);
+				if(timerRead(Ta) == 0) timerStart(Ta);
+				//INFO("check time - ground: %d\n",timerCheck(Ta));
+				if(timerCheck(Ta)>= timerGetThreshhold(Ta))
+				{
+					setFault(A_HIT_GROUND);
+					//strFaultCode = 6300;
+					//xSetFault(X_HIT_GROUND);
+					INFO("set fault: hit ground!\n");
+
+				}
+				//DEBUG("Fault: A_HIT_GROUND!\n");
+			}
+			else
+			{
+				if(flag_hitceiling == 0)
+				{
+					timerEnd(Ta);
+					flag_hitgroud = 0;
+				}
+			}
+
+			if((status_currentFloor == Lmax)&&(status_direction==1)&&(status_inPosition == 1))
+			{
+				flag_hitceiling = 1;
+				flag_hitgroud = 0;
+				if(timerRead(Ta) == 0) timerStart(Ta);
+				//INFO("check time - ceiling: %d\n",timerCheck(Ta));
+				if(timerCheck(Ta)>= timerGetThreshhold(Ta))
+				{
+					setFault(A_HIT_CEILING);
+					//strFaultCode = 6200;
+					//xSetFault(X_HIT_CEILING);
+					INFO("set fault: hit ceiling!\n");
+				}
+				//DEBUG("Fault: A_HIT_CEILING!\n");
+			}
+			else
+			{
+				if(flag_hitgroud == 0)
+				{
+					timerEnd(Ta);
+					flag_hitceiling = 0;
+				}
+			}
+		}
+
+		/*here to check if A_STOP_OUT_AREA or  A_CLOSE_IN_POSITION, or A_CLOSE_OUT_POSITIONoccurs*/
+		if(status_havingPeople == 0)//no people in the cube
+		{
+			//refresh, seperate before and after fault occurs, if faults occur, should not reset here.
+			timerEnd(Tb);
+			//timerEnd(Tc);
+			//timerEnd(Td);
+			timerEnd(Te);
+			//inpositionCalled = 0;
+			//removeFault(A_CLOSE_IN_POSITION);
+			//removeFault(A_CLOSE_OUT_POSITION);
+
+			if(status_inPosition == 1)
+			{
+				if(timerRead(Tf) == 0) timerStart(Tf);
+				if(timerCheck(Tf)>= timerGetThreshhold(Tf))
+				{
+					if(getFaultState(A_HIT_GROUND)==0 && getFaultState(A_HIT_CEILING)==0)
+					{
+						setFault(A_STOP_OUT_AREA);
+						DEBUG("Fault: A_STOP_OUT_AREA!\n");
+						//strFaultCode = 6000;
+						//xSetFault(X_STOP_OUT_AREA);
+					}
+
+				}
+			}
+			else
+			{
+				timerEnd(Tf);
+				//removeFault(A_STOP_OUT_AREA);
+			}
+		}
+		else//having people in the elevator
+		{
+			timerEnd(Tf);//stop all timers related with having no people in the cube
+			//removeFault(A_STOP_OUT_AREA);
+
+			/*********************************************/
+			/*here to check if A_CLOSE_IN_POSITION occurs*/
+			if(status_inPosition == 0 && status_doorStatus == 0)
+			{
+				if(timerRead(Tb) == 0) timerStart(Tb);
+				if((timerRead(Tb)>0)&&(timerCheck(Tb)>= timerGetThreshhold(Tb)))
+				{
+					if(timerRead(Tc) == 0) //because this just occur once
+					{
+						timerStart(Tc);
+						//DEBUG("broadcastWarningTone^\n");
+						//checkSoundPlayerAvailable();
+						broadcastNeeded = 1;//broadcastWarningTone(1);//warning tone item No. 1
+
+
+					}
+					//else //activated once, could be omitted, like above?
+					//{
+					if((timerRead(Td)>0)&&(timerCheck(Td)%timerGetThreshhold(Td)==0))
+					{
+						//DEBUG("broadcastUrgingTone^\n");
+						broadcastNeeded = 1;//broadcastUrgingTone(1);
+						//timerEnd(Td);
+					}
+					//}
+					if(status_alarmButtonPushed==S_alarmButtonPushed_ON) //act immediately
+					{
+						//timerEnd(Tc);
+						if(timerRead(Td) == 0)
+					   	{
+							timerStart(Td);
+							//DEBUG("broadcastWarningTone^\n");
+							//broadcastUrgingTone(1);
+						}
+						DEBUG("Fault: A_CLOSE_IN_POSITION!\n");
+						setFault(A_CLOSE_IN_POSITION);
+						//strFaultCode = 9000;
+						//xSetFault(X_CLOSE_PEOPLE);
+
+						//DEBUG("Make a call^\n");
+						//if(inpositionCalled == 0)
+						//{
+							makeACall();//how much time will it take before it returns?
+							inpositionCalled = 1;
+						//}
+					}
+					else
+					{
+						if((timerRead(Tc)>0)&&(timerCheck(Tc)>= timerGetThreshhold(Tc)))
+						{
+							DEBUG("Fault: A_CLOSE_IN_POSITION!\n");
+							setFault(A_CLOSE_IN_POSITION);
+							//strFaultCode = 9000;
+							//xSetFault(X_CLOSE_PEOPLE);
+
+							///DEBUG("broadcastPlacatingTone^\n");
+							//broadcastPlacatingTone(1);
+
+							if(timerRead(Td) == 0)
+						   	{
+								timerStart(Td);
+								///DEBUG("broadcastUrgingTone^\n");
+								//broadcastUrgingTone(1);
+							}
+							//timerEnd(Tc);
+
+							///DEBUG("Make a call^\n");
+							if(inpositionCalled == 0)
+							{
+								if(broadcastNeeded == 0)
+								{
+								 	makeACall();  //add by JC, 20160429
+									inpositionCalled = 1;
+								}
+							}
+
+						}
+					}
+				}
+			}
+			else //1)reset all timers and counters; 2)reset fault alert
+			{
+				//if(status_doorStatus == 1)
+				//{
+					timerEnd(Tb);
+					//timerEnd(Tc);
+					//timerEnd(Td);
+					//inpositionCalled = 0;
+					//removeFault(A_CLOSE_IN_POSITION);
+				//}
+			}
+			/**********************************************/
+			/*here to check if A_CLOSE_OUT_POSITION occurs*/
+			//if(status_inPosition == 1 && status_doorStatus == 0)   //status_inPosition = 1,非平层, and should ignore whether door is open or not.
+			if(status_inPosition == 1)
+			{
+				if(timerRead(Te) == 0) timerStart(Te);
+				if((timerRead(Te)>0)&&(timerCheck(Te)>= timerGetThreshhold(Te)))
+				{
+					DEBUG("Fault: A_CLOSE_OUT_POSITION!\n");
+					setFault(A_CLOSE_OUT_POSITION);
+					//strFaultCode = 9000;
+					//xSetFault(X_CLOSE_PEOPLE);
+
+					if(timerRead(Td) != 0) //activated once, same with above &&
+					{
+						//counttime = timerCheck(Td)%timerGetThreshhold(Td);
+						//DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+						//DEBUG("counttime is %d !!!!!!!!!!!!!!!!!!!!!!!!!!\n", counttime);
+						//if(counttime == 0)
+						//INFO("timerRead(Td) not 0\n");
+						if((timerCheck(Td)%timerGetThreshhold(Td))==0)
+						{
+							///DEBUG("broadcastUrgingTone^\n");
+							broadcastNeeded = 1;//broadcastUrgingTone(1);
+							//timerEnd(Td);
+						}
+					}
+
+					if(status_alarmButtonPushed==S_alarmButtonPushed_ON) //act immediately
+					{
+
+						//setFault(A_CLOSE_OUT_POSITION);
+						//INFO("AlarmButtonPushed, make a call^\n");
+						//if(outpositionCalled == 0)  //call anytime when button pushed
+						//{
+						 	makeACall();
+							outpositionCalled = 1;
+						//}
+					}
+					else
+					{
+						//if((timerRead(Tc)>0)&&(ttimerCheck(Tc)>= timerGetThreshhold(Tc))
+						//{
+							//setFault(A_CLOSE_OUT_POSITION);
+							///DEBUG("broadcastWarningTone^\n");
+							//broadcastWarningTone(1);
+							if(timerRead(Td) == 0)
+						   	{
+								//INFO("timerRead(Td) is 0\n");
+								timerStart(Td);
+								broadcastNeeded = 1;//broadcastWarningTone(1);
+								//DEBUG("!!!!!set broadcastNeeded !!!!!!!!!!!!!!!!!!!!\n"); //once at first time
+								//broadcastUrgingTone(1);
+							}
+							////DEBUG("Make a call^\n");
+							if(outpositionCalled == 0)
+							{
+								if(broadcastNeeded == 0)
+								{
+								 	makeACall();
+									outpositionCalled = 1;
+								}
+							}
+							//timerEnd(Tc);
+						//}
+					}
+
+
+				}
+
+			}
+			else
+			{
+				//if(status_doorStatus == 1) //door open
+				//{
+				 	timerEnd(Te);
+					//outpositionCalled = 0;  //reset, so once for every time of fault, JC 20160526
+					//removeFault(A_CLOSE_OUT_POSITION);
+				//}
+			}
+		}
+
+		//A_OVERSPEED 		3//超速；**
+		//if(0)setFault(A_OVERSPEED);
+
+		//A_OPEN_WHILE_RUNNIN 	4//运行中开门；**
+		//if(0)setFault(A_OPEN_WHILE_RUNNIN);
+		if((lastDoor == 0 && lastPosition == 1)&&(status_doorStatus == 1 && status_inPosition == 1))
+		{
+			setFault(A_OPEN_WHILE_RUNNIN);
+			//strFaultCode = 6100;
+			//xSetFault(X_OPEN_WHILE_RUNNIN);
+			DEBUG("Fault: A_OPEN_WHILE_RUNNIN!\n");
+		}
+
+		//A_OPEN_WITHOUT_STOPPIN 	5//开门走车；**
+/*
+		if(pElevatorStatus.EStatus_doorStatus == 1 && pElevatorStatus.EStatus_direction != 0)
+		{
+			setFault(A_OPEN_WITHOUT_STOPPIN);
+			DEBUG("Fault: A_OPEN_WITHOUT_STOPPIN!\n");
+		}
+*/
+		//0:door closed; 1:door open, 0:in position, 1: not in position
+		if((lastDoor == 1 && lastPosition == 0)&&(status_doorStatus == 1 && status_inPosition != 0))
+		{
+			setFault(A_OPEN_WITHOUT_STOPPIN);
+			DEBUG("Fault: A_OPEN_WITHOUT_STOPPIN!\n");
+		}
+
+		//A_POWER_CUT 		9//停电；
+		if(status_powerStatus == 0) //normal
+		{
+			//DEBUG("Power on, set LED return: %d\n",set_SStatus_emergencyLED(0));//NPN,0:NC
+			set_SStatus_emergencyLED(0);
+			removeFault(A_POWER_CUT);
+		}else //lost main power
+		{
+			//DEBUG("Power off, set LED return: %d\n",set_SStatus_emergencyLED(1));//NPN,1:NO
+			set_SStatus_emergencyLED(1);
+			DEBUG("Fault: A_POWER_CUT!\n");
+			setFault(A_POWER_CUT);
+		}
+
+		//A_SAFE_LOOP_BREAK 	10//安全回路断路；
+		if(pSensorsStatus.SStatus_safeCircuit == S_safeCircuit_OFF )
+			setFault(A_SAFE_LOOP_BREAK); //OFF means cut off, NC, so OFF sigal = 1
+		else
+			removeFault(A_SAFE_LOOP_BREAK);
+
+		//A_OPEN_FAULT 		11//开门故障；
+		if(0)setFault(A_OPEN_FAULT);
+
+		//A_CLOSE_FAULT 	12//关门故障；**
+		if(status_doorStatus == 1) //open
+		{
+			if(timerRead(Tm) == 0) timerStart(Tm);
+			if((timerRead(Tm) >0)&&(timerCheck(Tm)>= timerGetThreshhold(Tm)))
+			{
+				DEBUG("Fault: A_CLOSE_FAULT!\n");
+				setFault(A_CLOSE_FAULT);
+			}
+		}
+		else
+		{
+			timerEnd(Tm);
+			//removeFault(A_CLOSE_FAULT);
+		}
+
+		//0:door closed; 1:door open, 0:in position, 1: not in position
+
+		if(lastPosition == 0 && status_inPosition == 0 && lastDoor == 1 && status_doorStatus == 0)//only check when in positon
+		{
+			count_closeAndOpen++;
+			if(count_closeAndOpen >= Cm) setFault(A_CLOSE_FAULT);
+		}
+		else
+		{
+			count_closeAndOpen = 0;
+		}
+
+		//A_OVERSPEED 		3//超速；**
+		///DEBUG("speed threshhold is%f\n",(((float)Sk)/10)*(((float)Sn)/10));
+
+		if(status_speed <=(((float)Sk)/10)*(((float)Sn)/10))
+		{
+			count_normalSpeedFloor = status_currentFloor;
+			if(status_speed >= 0.9*((float)Sk)/10)
+			{
+
+				if(lastNormalSpeed == 0)
+				{
+					lastNormalSpeed = 1; //mark NormalSpeed for the first time
+				}
+				else
+				{
+					removeFault(A_OVERSPEED); //it was NormalSpeed last time
+					//xRemoveFault(X_OVERSPEED);
+					lastNormalSpeed = 0;
+				}
+				/*
+				if(count_normalSpeed = 0)
+				count_normalSpeed++
+				if(count_normalSpeed = 2)
+
+				count_normalSpeed
+				*/
+			}
+			else
+				lastNormalSpeed = 0;
+		}
+		else
+		{
+			count_overSpeedFloor = status_currentFloor;
+			lastNormalSpeed = 0;
+		}
+		if(count_overSpeedFloor != 0)//'cause there is no floor 0
+	 	{
+			if((count_overSpeedFloor - count_normalSpeedFloor >= Sl) ||(count_normalSpeedFloor - count_overSpeedFloor >= Sl))
+			{
+				count_normalSpeedFloor = 0;
+				count_overSpeedFloor = 0;
+				setFault(A_OVERSPEED);
+				//strFaultCode = 6400;
+				//xSetFault(X_OVERSPEED);
+			}
+		}
+
+
+		//A_SPEED_ANOMALY 	15//电梯速度异常；
+		if(0)setFault(A_SPEED_ANOMALY);
+
+		//A_OVERSPEED_1_2 	16//超速1.2倍；
+		if(0)setFault(A_OVERSPEED_1_2);
+
+		//A_OVERSPEED_1_4 	17//超速1.4倍；
+		if(0)setFault(A_OVERSPEED_1_4);
+
+		/*check if fualts should be removed*/
+		if(status_inPosition == 0 && status_doorStatus == 1)
+		{
+			removeFault(A_HIT_GROUND);
+			//xRemoveFault(X_HIT_GROUND);
+
+			removeFault(A_HIT_CEILING);
+			//xRemoveFault(X_HIT_CEILING);
+
+			removeFault(A_STOP_OUT_AREA);
+			//xRemoveFault(X_STOP_OUT_AREA);
+			{
+				removeFault(A_CLOSE_IN_POSITION);
+				timerEnd(Tb);
+				timerEnd(Tc);
+				timerEnd(Td);
+				inpositionCalled = 0;
+			}
+			removeFault(A_OPEN_WHILE_RUNNIN);
+			//xRemoveFault(X_OPEN_WHILE_RUNNIN);
+
+			removeFault(A_OPEN_WITHOUT_STOPPIN);
+			//removeFault(A_OVERSPEED);
+			//removeFault(A_CLOSE_FAULT);
+		}
+		if(status_doorStatus == 0 && status_inPosition == 1) //close and move
+		{
+			removeFault(A_CLOSE_FAULT);
+		}
+
+		if(status_doorStatus == 1 && status_havingPeople == 0)
+		{
+			removeFault(A_CLOSE_OUT_POSITION);
+			//xRemoveFault(X_CLOSE_PEOPLE);
+
+			timerEnd(Te);
+			timerEnd(Td);
+			outpositionCalled = 0;
+		}
+/*
+		if(status_powerStatus == 0)
+		{
+			removeFault(A_POWER_CUT);
+ 		}
+*/
+
+	lastPosition = status_inPosition;
+	lastDoor = status_doorStatus;
+
+    //}//status_inRepairing
+
+    //nopoll_sleep(1000000);
+}
+
+
 int httpGet_ServerTime(void)
 {
 	JSON_Value *j_Value;
@@ -1594,18 +2194,31 @@ int httpGet_ServerTime(void)
 	return 0;
 }
 
+#define CMD_LEN 1024
+#define CMD_RECV 1024
+
+char socketCmdBuf[CMD_LEN];
+char socketCmdRecvBuf[CMD_RECV];
+
 int httpPost_DeviceRegister(void)
 {
 	int Count_MaxNoResponse = 10;
 	time_t t;
+	Lift_return_t ret=0;
 
 	char *sign;
 	char *signSrc;
 	char md[16]={0};
 	int signSrcLen = 0;
 
+	memset(socketCmdBuf,0,CMD_LEN);
+	memset(socketCmdRecvBuf,0,CMD_RECV);
+	sprintf(socketCmdBuf, "#10#{\"type\":\"login\",\"eid\":\"mx12345678\"}#13#");
+	ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf));
+	//ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf), recvbuf, recvlen);
 
-	DEBUG("httpPost_DeviceRegister finished^\n");
+
+	DEBUG("httpPost_DeviceRegister finished. ret=%d. buf=%s\n", ret, socketCmdRecvBuf);
 
 	return 0;
 }
@@ -1830,9 +2443,9 @@ void getSensorsStatus(){
 
     memset(UartBuf, 0, SOCKETBUFSIZE);
 
-#ifdef WIN_PLATFORM
+#if 1 //def WIN_PLATFORM
 
-    if(T01[i][0] != 0x00){
+    if(T02[i][0] != 0x00){
         memcpy(UartBuf, T01[i], TITEMLEN);
         i++;
     }else{
@@ -1970,7 +2583,8 @@ int CheckLiftStatus(void){
 		/*check faults when elevator not in a repairing*/
 
 		//sem_p(sem_d);
-		checkElevatorFault_IO1();
+		//checkElevatorFault_IO1();
+		checkElevatorFault();
 		handleElevatorFault();
 		//sem_v(sem_d);
 
