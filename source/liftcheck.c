@@ -393,7 +393,7 @@ int lastPosition = 9;  //here 9 means uncertain
 int lastDoor = 9;
 
 int BaseFloor = 1;
-float UpDownDistance=0;
+float UpDownDistance=0.1;
 
 float overSpeed_speed = 0;
 int overSpeed_directon = 0;
@@ -1343,7 +1343,7 @@ void elevatorStatus_init()
 	pElevatorStatus.EStatus_inPosition = 0;
 	pElevatorStatus.EStatus_speed = 0;
 	pElevatorStatus.EStatus_havingPeople = 0;
-	pElevatorStatus.EStatus_currentFloor = 0;//BaseFloor;because there is no floor #0;
+	pElevatorStatus.EStatus_currentFloor = Lbase;
 	pElevatorStatus.EStatus_backup1 = NULL;
 	pElevatorStatus.EStatus_backup2 = NULL;
 }
@@ -1964,38 +1964,58 @@ int httpGet_ServerTime(void)
 	return 0;
 }
 
-#define CMD_LEN 1024
-#define CMD_RECV 1024
+#define CMD_LEN 1492
+#define CMD_RECV 1492
 
-char socketCmdBuf[CMD_LEN];
-char socketCmdRecvBuf[CMD_RECV];
+uint8_t socketCmdBuf[CMD_LEN];
+uint8_t socketCmdRecvBuf[CMD_RECV];
 
 int httpPost_DeviceRegister(void)
 {
 #ifndef WIN_PLATFORM
 	int Count_MaxNoResponse = 10;
-	time_t t;
 	Lift_return_t ret=0;
+	int len=0;
 
-	char *sign;
-	char *signSrc;
-	char md[16]={0};
-	int signSrcLen = 0;
-
-	memset(socketCmdBuf,0,CMD_LEN);
-	memset(socketCmdRecvBuf,0,CMD_RECV);
+	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
+	memset(socketCmdRecvBuf,0,sizeof(socketCmdRecvBuf));
 	sprintf(socketCmdBuf, "#10#{\"type\":\"login\",\"eid\":\"mx12345678\"}#13#");
 	ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf));
-	//ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf), recvbuf, recvlen);
-
+	if (ret == Cat1_STATUS_SUCCESS) {
+		DEBUG("send data:%s\r\n",socketCmdBuf);
+	} else { 
+		DEBUG("send data is fail!\n");
+		return;
+	}
+	
+	vTaskDelay(CAT1_DELAY_1000MS);
+	DEBUG("prepare recv data\n");
+	
+	ret=cat1_recv(socketCmdRecvBuf,&len);
+	if(ret == Cat1_STATUS_SUCCESS){
+		DEBUG("recv data:%s --len=%d\r\n",socketCmdRecvBuf, len);
+	} else if (ret == Cat1_STATUS_TIMEOUT){
+		DEBUG("recv data timeout ! \r\n");
+	} else {
+		DEBUG("recv data failed ! \r\n");
+	}
 
 	DEBUG("httpPost_DeviceRegister finished. ret=%d. buf=%s\n", ret, socketCmdRecvBuf);
 #endif
 	return 0;
 }
 
-int httpPost_HeartBeat(void)//when to get uid? in httpPost_DeviceRegister()
+int httpPost_HeartBeat(void)
 {
+	Lift_return_t ret=0;
+	int len=0;
+	
+	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
+	memset(socketCmdRecvBuf,0,sizeof(socketCmdRecvBuf));
+	sprintf(socketCmdBuf, "#10#\"type\":\"cping\"}#13#");
+	ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf));
+
+	DEBUG("httpPost_HeartBeat finished. ret=%d. buf=%s\n", ret, socketCmdBuf);
 
 	return 0;
 }
@@ -2003,9 +2023,17 @@ int httpPost_HeartBeat(void)//when to get uid? in httpPost_DeviceRegister()
 
 int httpPost_FaultAlert(int int_alertType)
 {
-	time_t t;
+	Lift_return_t ret=0;
+	int len=0;
 
-		return 0;
+	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
+	memset(socketCmdRecvBuf,0,sizeof(socketCmdRecvBuf));
+	sprintf(socketCmdBuf, "#10#{\"type\":\"fault\",\"code\":%d}#13#", int_alertType);
+	ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf));
+
+	DEBUG("httpPost_FaultAlert finished. ret=%d. buf=%s\n", ret, socketCmdBuf);
+
+	return 0;
 }
 
 /*get-set functions*/
@@ -2019,10 +2047,16 @@ int httpPost_FaultAlert(int int_alertType)
 */
 int httpPost_FaultRemove(int int_alertType)
 {
-	time_t t;
+	Lift_return_t ret=0;
+	int len=0;
 
+	memset(socketCmdBuf,0,CMD_LEN);
+	sprintf(socketCmdBuf, "#10#{\"type\":\"faultremove\",\"code\":%d}#13#", int_alertType);
+	ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf));
 
-		return 0;
+	DEBUG("httpPost_FaultRemove finished. ret=%d. buf=%s\n", ret, socketCmdBuf);
+
+	return 0;
 }
 
 void handleElevatorFault(void)
@@ -2156,7 +2190,7 @@ void getSensorsStatus(){
 		gettimeofday(&tv_speed2, NULL);
 		if ((timeIntervalUsec = tv_cmp(tv_speed2, tv_speed1)) > 0)
 		{
-			//pElevatorStatus.EStatus_speed = TIME_UNIT * UpDownDistance / timeIntervalUsec;
+			pElevatorStatus.EStatus_speed = TIME_UNIT * UpDownDistance / timeIntervalUsec;
 			//DEBUG("**** speed is %f ****\n",pElevatorStatus.EStatus_speed);
 		}
 	}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
@@ -2183,6 +2217,10 @@ void getSensorsStatus(){
     pElevatorStatus.EStatus_doorStatus = get_EStatus_doorStatus();
     pElevatorStatus.EStatus_inPosition = get_EStatus_inPosition();
 
+	if(pSensorsStatus.SStatus_baseStation==1){
+		pElevatorStatus.EStatus_currentFloor = Lbase;
+	}
+
     return;
 }
 
@@ -2199,9 +2237,26 @@ int CheckLiftStatus(void){
 	
 	while (1)
 	{
+		WDG_feedingWatchdog();
 		count++;
 
 		INFO("**[%d]**\n", count);
+
+		if(count<10){
+			LIFT_SLEEP_MS(500);
+			continue;
+		}
+		if(count==10){
+			INFO("httpPost_DeviceRegister at %d\n", count);
+			httpPost_DeviceRegister();
+			LIFT_SLEEP_MS(500);
+			continue;
+		}
+		if(count%10==0){
+			//send heart beat
+			INFO("send heart beat at %d\n", count);
+			httpPost_HeartBeat();
+		}
 		
 		/*refresh status of all sensors*/
 		refreshStatus();
@@ -2216,6 +2271,7 @@ int CheckLiftStatus(void){
 
 		/*check every second*/
 		LIFT_SLEEP_MS(500);
+		
 	}
 	return 0;    
 }
@@ -2248,10 +2304,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 void liftCheckSensorStreamData(xTimerHandle pvParameters)
 {
-
+	printf("liftCheckSensorStreamData\r\n");
 }
 
 
+extern Cat1_return_t cat1_demo(void);
 
 void liftCheckTask(void *pvParameters)
 {
@@ -2261,7 +2318,7 @@ void liftCheckTask(void *pvParameters)
 	int ret = 0;
 
 	DEBUG("liftCheckTask\r\n");
-
+	
 	ret = Lift_DriverInit();
 	if(ret == Lift_STATUS_SUCCESS) {
 		DEBUG("LIFT USart_2 initialization SUCCESSFUL\r\n");

@@ -270,11 +270,12 @@ void sensorStreamData(xTimerHandle pvParameters)
         _waterData = 0xFFF & ADC_DataScanGet(ADC0);
 		sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "water_depth= %ld\n", _waterData);
 	}
-
+#if 0
 	printf("temp (mCelsius) = %d\n", _envData.temperature);
 	printf("pressure (Pascal) = %d\n", _envData.pressure);
 	printf("humidity (%%rh) = %d\n", _envData.humidity);
 	DBG("the sensor length is %d\r\n",sensorStreamBuffer.length);
+#endif 	
 }
 
 /**
