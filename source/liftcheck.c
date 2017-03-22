@@ -1136,8 +1136,7 @@ void timerEnd(int num)
 
 int timerGetThreshhold(int num)
 {
-	//return timerThreshhold[num];
-	return timerThreshhold[num]/2;
+	return timerThreshhold[num];
 }
 
 int timerSetThreshhold(int num, int value)
