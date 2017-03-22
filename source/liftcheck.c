@@ -1381,7 +1381,7 @@ void setFault(int faultNUM)
 	faultTypeIndi[faultNUM] = 1;
 	DEBUG("***********          Fault: %d        ******\n", faultNUM);	
 	LIFT_SLEEP_MS(2000);
-	getchar();
+	//getchar();
 }
 
 int getFaultState(int faultNUM)
@@ -2087,7 +2087,7 @@ void getSensorsStatus(){
 
     memset(UartBuf, 0, SOCKETBUFSIZE);
 
-#if 1 //def WIN_PLATFORM
+#ifdef WIN_PLATFORM
 
     if(T04[i][0] != 0x00){
         memcpy(UartBuf, T04[i], TITEMLEN);
