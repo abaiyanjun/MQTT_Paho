@@ -226,7 +226,7 @@ void sensorStreamData(xTimerHandle pvParameters)
 	LightSensor_readLuxData        (xdkLightSensor_MAX44009_Handle  	, &_lgtData);
 	Magnetometer_readXyzTeslaData  (xdkMagnetometer_BMM150_Handle       , &_magData);
 	_timestamp = PowerMgt_GetSystemTime();
-
+#if 0
 	sensorStreamBuffer.length = 0;
 	DBG("the sensor length is %d\r\n",sensorStreamBuffer.length);
 
@@ -270,12 +270,12 @@ void sensorStreamData(xTimerHandle pvParameters)
         _waterData = 0xFFF & ADC_DataScanGet(ADC0);
 		sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "water_depth= %ld\n", _waterData);
 	}
-#if 0
+
 	printf("temp (mCelsius) = %d\n", _envData.temperature);
 	printf("pressure (Pascal) = %d\n", _envData.pressure);
 	printf("humidity (%%rh) = %d\n", _envData.humidity);
 	DBG("the sensor length is %d\r\n",sensorStreamBuffer.length);
-#endif 	
+#endif
 }
 
 /**

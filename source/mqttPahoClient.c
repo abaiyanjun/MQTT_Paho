@@ -43,6 +43,7 @@
 #include "cat1_API.h"
 
 #include "liftcheck.h"
+#include "lift_UartDev.h"
 
 /* constant definitions ***************************************************** */
 
@@ -219,6 +220,7 @@ void clientStopTimer(void)
 void clientInit(void)
 {
 	Cat1_return_t ret;
+	Lift_return_t retlift;
 	/* Initialize Variables */
     int rc = 0;
     NewNetwork(&n);
@@ -234,6 +236,8 @@ void clientInit(void)
 	
     ConnectNetwork(&n, MQTT_BROKER_NAME, MQTT_PORT);
 #endif
+
+#if 1
     MQTTClient(&c, &n, 1000, buf, CLIENT_BUFF_SIZE, readbuf, CLIENT_BUFF_SIZE);
 
     /* Configure the MQTT Connection Data */
@@ -294,8 +298,17 @@ void clientInit(void)
     {
     	clientDeinit();
     }
-	
+#endif
+
 #if 1//def LIFT_CHECK //byj
+
+	retlift = Lift_DriverInit();
+	if(retlift == Lift_STATUS_SUCCESS) {
+		DBG("LIFT USart_2 initialization SUCCESSFUL\r\n");
+	} else {
+		DBG("LIFT USart_2 initialization FAILED\r\n");
+	}
+
 	/* Create Live Data Check */
     liftCheckTimerHandle = xTimerCreate(
 			(const char * const) "LiftCheckTimer",
@@ -306,7 +319,7 @@ void clientInit(void)
 
 	/* Create MQTT Client Task */
     rc = xTaskCreate(liftCheckTask, (const char * const) "LiftCheckTask",
-                    		CLIENT_TASK_STACK_SIZE, NULL, CLIENT_TASK_PRIORITY, &liftCheckTaskHandler);
+                    		10240, NULL, 1, &liftCheckTaskHandler);
 
     /* Error Occured Exit App */
     if(rc < 0)

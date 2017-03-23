@@ -93,7 +93,7 @@ void Characters_Converts_char(char* des, char *src,int length)
 Cat1_return_t cat1_health_check(void)
 {
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
 	char *token = NULL;
 	memset(cmdRecv,0,sizeof(cmdRecv));
 
@@ -368,10 +368,10 @@ Cat1_return_t cat1_close(void)
 Cat1_return_t cat1_send(uint16_t *buf, uint16_t len)
 {
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE]= {0};
 	char *token = NULL;  
-	uint8_t buffer[400];
-	uint8_t  data_buf[800];
+	uint8_t buffer[400]= {0};
+	uint8_t  data_buf[800] = {0};
 	memset(buffer,0,sizeof(buffer));
 	memset(cmdRecv,0,sizeof(cmdRecv));
 	memset(data_buf,0,sizeof(data_buf));
@@ -432,7 +432,7 @@ Cat1_return_t cat1_send(uint16_t *buf, uint16_t len)
 Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 {	
 	Cat1_return_t ret;
-	uint16_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint16_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
 
 	char *token = NULL;
 	char *token1 = NULL;
@@ -493,7 +493,7 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
  {
  	
  	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
 	char *token = NULL;
 	memset(cmdRecv,0,sizeof(cmdRecv));
 
@@ -544,7 +544,7 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
  {
  	
  	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
 	char *token = NULL;
 	memset(cmdRecv,0,sizeof(cmdRecv));
 
@@ -597,7 +597,7 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 {
 
  	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
 	char *token = NULL;
 	memset(cmdRecv,0,sizeof(cmdRecv));
 	
@@ -647,7 +647,7 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 {
 	
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
 	char *token = NULL;
 	memset(cmdRecv,0,sizeof(cmdRecv));
 
@@ -694,7 +694,7 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 {
 
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
 	char *token = NULL;
 	memset(cmdRecv,0,sizeof(cmdRecv));
 
@@ -745,7 +745,7 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 {
 	
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
 	char *token = NULL;
 	memset(cmdRecv,0,sizeof(cmdRecv));
 

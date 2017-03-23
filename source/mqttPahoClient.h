@@ -31,7 +31,7 @@
 #include "MQTTClient.h"
 
 /* Paho Client type and macro definitions */
-#define CLIENT_TASK_STACK_SIZE            1024
+#define CLIENT_TASK_STACK_SIZE            1024*2
 #define CLIENT_TASK_PRIORITY              1
 
 #define CLIENT_BUFF_SIZE                  1000
