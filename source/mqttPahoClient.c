@@ -237,7 +237,7 @@ void clientInit(void)
     ConnectNetwork(&n, MQTT_BROKER_NAME, MQTT_PORT);
 #endif
 
-#if 1
+#if 0
     MQTTClient(&c, &n, 1000, buf, CLIENT_BUFF_SIZE, readbuf, CLIENT_BUFF_SIZE);
 
     /* Configure the MQTT Connection Data */
@@ -324,7 +324,7 @@ void clientInit(void)
     /* Error Occured Exit App */
     if(rc < 0)
     {
-    	clientDeinit();
+		DBG("liftCheckTask initialization FAILED\r\n");
     }
 #endif
     return;

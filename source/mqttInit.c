@@ -42,6 +42,7 @@
 /* paho header files */
 #include "MQTTClient.h"
 
+extern void liftCheckClientInit(void);
 /* constant definitions ***************************************************** */
 
 /* local variables ********************************************************** */
@@ -63,19 +64,20 @@ void appInitSystem(xTimerHandle xTimer)
     (void) (xTimer);
 
     /* Initialize Sensors */
-    sensorInit();
+    //byj sensorInit();
 
     /* Initialize WiFi */
     //wifiInit();
 
     /* Initialize Client */
-    clientInit();
+    //clientInit();
 
+	liftCheckClientInit();
 
     /* Initialize Buttons */
-    buttonInit();
+    //byj buttonInit();
 
-    WDG_init(WDG_FREQ, WDG_TIMEOUT);
+    //byj WDG_init(WDG_FREQ, WDG_TIMEOUT);
 
     /* Turn ON Orange LED to indicate Initialization Complete */
     PTD_pinOutSet(PTD_PORT_LED_ORANGE, PTD_PIN_LED_ORANGE);

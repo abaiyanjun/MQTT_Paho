@@ -336,8 +336,6 @@ Lift_return_t send_send_cmd_lift(uint8_t *cmdSend , uint8_t *cmdRecv,int timeout
 Lift_return_t send_recv_lift(uint8_t *cmdRecv)
 {
 	Lift_return_t ret;
-	char *str = NULL;
-
 	ret = receive_data_from_device(cmdRecv);
 	return ret;
 }

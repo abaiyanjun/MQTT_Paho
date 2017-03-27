@@ -48,16 +48,16 @@
 #define	WLAN_SSID	  		"xiangcdc2107467746ddd2"      	  /**< WLAN SSID Name */
 #define	WLAN_PWD	  		"xiang123"          /**< WLAN PWD */
 #define	MQTT_CLIENT_ID	    "pub_cdc2107467746ddd2"            /**< MQTT Client ID */
-#define MQTT_BROKER_NAME    "113.59.226.244"  /**< MQTT Broker */
-#define MQTT_PORT           1883                          /**< MQTT Port Number */
-//#define MQTT_BROKER_NAME    "114.55.42.28"  /**< MQTT Broker */
-//#define MQTT_PORT           25500                          /**< MQTT Port Number */
+//#define MQTT_BROKER_NAME    "113.59.226.244"  /**< MQTT Broker */
+//#define MQTT_PORT           1883                          /**< MQTT Port Number */
+#define MQTT_BROKER_NAME    "114.55.42.28"  /**< MQTT Broker */
+#define MQTT_PORT           25500                          /**< MQTT Port Number */
 
 /***cat1 server ip and port**/
-#define CAT1_SERVER_IP					"\"113.59.226.244\""
-#define	CAT1_SERVER_PORT				"\"1883\""
-//#define CAT1_SERVER_IP					"\"114.55.42.28\""
-//#define	CAT1_SERVER_PORT				"\"25500\""
+//#define CAT1_SERVER_IP					"\"113.59.226.244\""
+//#define	CAT1_SERVER_PORT				"\"1883\""
+#define CAT1_SERVER_IP					"\"114.55.42.28\""
+#define	CAT1_SERVER_PORT				"\"25500\""
 
 
 // Default Data Configuration Settings
