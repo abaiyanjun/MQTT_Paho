@@ -1544,7 +1544,8 @@ int getFaultState(int faultNUM)
 /*****************************/
 void removeFault(int faultNUM)
 {
-	if (getFaultState(faultNUM) == 1)removeFaultTypeIndi[faultNUM] = 1;
+	if (getFaultState(faultNUM) == 1) 
+		removeFaultTypeIndi[faultNUM] = 1;
 	faultTypeIndi[faultNUM] = 0;
 }
 
@@ -1637,8 +1638,6 @@ void checkElevatorFault(void)
 	//int status_floorLevel = pElevatorStatus.EStatus_currentFloor;
 
 	//Is these enough for checking if a fault happens?
-
-	//DEBUG("Info: while-check A_STOP_OUT_AREA.\n");
 
 #if 0	
 	DEBUG("+++Checking list+++\n \
@@ -1901,6 +1900,7 @@ void checkElevatorFault(void)
 
 		if(status_doorStatus == 1 && status_havingPeople == 0)
 		{
+			removeFault(A_CLOSE_IN_POSITION);
 			removeFault(A_CLOSE_OUT_POSITION);
 			//xRemoveFault(X_CLOSE_PEOPLE);
 
@@ -1909,9 +1909,9 @@ void checkElevatorFault(void)
 			outpositionCalled = 0;
 		}
 
-	lastPosition = status_inPosition;
-	lastDoor = status_doorStatus;
-	lastDirection = status_direction;
+		lastPosition = status_inPosition;
+		lastDoor = status_doorStatus;
+		lastDirection = status_direction;
 
     //}//status_inRepairing
 
@@ -2137,7 +2137,7 @@ fault 故障数组 Eg：[1,2,3]
 
 */
   	int status_direction = pElevatorStatus.EStatus_direction;
-	int status_inPosition = pElevatorStatus.EStatus_inPosition;
+	int status_inPosition = (pElevatorStatus.EStatus_inPosition)?0:1;
 	int status_currentFloor = pElevatorStatus.EStatus_currentFloor;
 	int status_doorStatus = pElevatorStatus.EStatus_doorStatus;
 	int status_havingPeople = pElevatorStatus.EStatus_havingPeople;
@@ -2146,7 +2146,7 @@ fault 故障数组 Eg：[1,2,3]
 
 	memset(FaultArray, 0, 100);
 
-	fault = getFaultState(8);
+	fault = getFaultState(A_CLOSE_OUT_POSITION);
 	if(fault){
 		if(strlen(FaultArray)){
 			strcat(FaultArray, ",1");
@@ -2154,7 +2154,7 @@ fault 故障数组 Eg：[1,2,3]
 			strcat(FaultArray, "1");
 		}
 	}
-	fault = getFaultState(7);
+	fault = getFaultState(A_CLOSE_IN_POSITION);
 	if(fault){
 		if(strlen(FaultArray)){
 			strcat(FaultArray, ",2");
@@ -2162,7 +2162,7 @@ fault 故障数组 Eg：[1,2,3]
 			strcat(FaultArray, "2");
 		}
 	}
-	fault = getFaultState(4);
+	fault = getFaultState(A_OPEN_WHILE_RUNNIN);
 	if(fault){
 		if(strlen(FaultArray)){
 			strcat(FaultArray, ",3");
@@ -2170,7 +2170,7 @@ fault 故障数组 Eg：[1,2,3]
 			strcat(FaultArray, "3");
 		}
 	}	
-	fault = getFaultState(6);
+	fault = getFaultState(A_STOP_OUT_AREA);
 	if(fault){
 		if(strlen(FaultArray)){
 			strcat(FaultArray, ",4");
@@ -2178,7 +2178,7 @@ fault 故障数组 Eg：[1,2,3]
 			strcat(FaultArray, "4");
 		}
 	}
-	fault = getFaultState(3);
+	fault = getFaultState(A_OVERSPEED);
 	if(fault){
 		if(strlen(FaultArray)){
 			strcat(FaultArray, ",5");
@@ -2186,7 +2186,7 @@ fault 故障数组 Eg：[1,2,3]
 			strcat(FaultArray, "5");
 		}
 	}
-	fault = getFaultState(1);
+	fault = getFaultState(A_HIT_CEILING);
 	if(fault){
 		if(strlen(FaultArray)){
 			strcat(FaultArray, ",6");
@@ -2194,7 +2194,7 @@ fault 故障数组 Eg：[1,2,3]
 			strcat(FaultArray, "6");
 		}
 	}
-	fault = getFaultState(2);
+	fault = getFaultState(A_HIT_GROUND);
 	if(fault){
 		if(strlen(FaultArray)){
 			strcat(FaultArray, ",7");
@@ -2202,7 +2202,7 @@ fault 故障数组 Eg：[1,2,3]
 			strcat(FaultArray, "7");
 		}
 	}
-	fault = getFaultState(5);
+	fault = getFaultState(A_OPEN_WITHOUT_STOPPIN);
 	if(fault){
 		if(strlen(FaultArray)){
 			strcat(FaultArray, ",8");
@@ -2213,7 +2213,7 @@ fault 故障数组 Eg：[1,2,3]
 
 	memset(HttpPostStatusFaultBuffer, 0, 1000);
 	sprintf(HttpPostStatusFaultBuffer, \
-		"{\
+		SPRE"{\
 \"type\": \"info\",\
 \"data\": {\
 \"direction\":%d,\
@@ -2224,7 +2224,7 @@ fault 故障数组 Eg：[1,2,3]
 \"reparing\":%d,\
 \"inmaintenance\":%d,\
 \"fault\":[%s]\
-}}", 
+}}"SEND, 
 		status_direction,
 		status_inPosition,
 		status_currentFloor,
@@ -2415,7 +2415,7 @@ void getSensorsStatus(){
 		if(pElevatorStatus.EStatus_direction ==1){//up
     		if (pElevatorStatus.EStatus_currentFloor < Lmax) pElevatorStatus.EStatus_currentFloor++;
     		if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor = 1;
-		}else if(pElevatorStatus.EStatus_direction ==1){//down
+		}else if(pElevatorStatus.EStatus_direction ==2){//down
     		if (pElevatorStatus.EStatus_currentFloor > Lmin) pElevatorStatus.EStatus_currentFloor--;
     		if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor = 1;
 		}
