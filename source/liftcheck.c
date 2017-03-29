@@ -1871,7 +1871,7 @@ void checkElevatorFault(void)
 		}
 
 		/*check if fualts should be removed*/
-		if(status_inPosition == 0 && status_doorStatus == 1)
+		if(status_inPosition == 0)// && status_doorStatus == 1)
 		{
 			removeFault(A_HIT_GROUND);
 			//xRemoveFault(X_HIT_GROUND);
@@ -1898,7 +1898,7 @@ void checkElevatorFault(void)
 			removeFault(A_CLOSE_FAULT);
 		}
 
-		if(status_doorStatus == 1 && status_havingPeople == 0)
+		if(status_havingPeople == 0) // && status_doorStatus == 1
 		{
 			removeFault(A_CLOSE_IN_POSITION);
 			removeFault(A_CLOSE_OUT_POSITION);
@@ -2498,7 +2498,7 @@ int CheckLiftStatus(void){
 		//sem_p(sem_d);
 		//checkElevatorFault_IO1();
 		checkElevatorFault();
-		handleElevatorFault();
+		//handleElevatorFault();
 		handleElevatorStatus();
 		httpPost_StatusFault(0);
 		//sem_v(sem_d);
