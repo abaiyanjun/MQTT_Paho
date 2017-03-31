@@ -1778,8 +1778,8 @@ void checkElevatorFault(void)
 			//timerEnd(Td);
 			timerEnd(Te);
 			//inpositionCalled = 0;
-			//removeFault(A_CLOSE_IN_POSITION);
-			//removeFault(A_CLOSE_OUT_POSITION);
+			removeFault(A_CLOSE_IN_POSITION);
+			removeFault(A_CLOSE_OUT_POSITION);
 			if(status_inPosition == 1)
 			{
 				if(timerRead(Tf) == 0) timerStart(Tf);
@@ -1817,6 +1817,7 @@ void checkElevatorFault(void)
 			}
 			else //1)reset all timers and counters; 2)reset fault alert
 			{
+				removeFault(A_CLOSE_IN_POSITION);			
 				timerEnd(Tb);
 			}
 			/**********************************************/
@@ -1831,8 +1832,9 @@ void checkElevatorFault(void)
 				}
 			}
 			else
-			{
-				 timerEnd(Te);
+			{			
+				removeFault(A_CLOSE_OUT_POSITION);
+				timerEnd(Te);
 			}
 		}
 #if 0
@@ -1881,18 +1883,22 @@ void checkElevatorFault(void)
 
 			removeFault(A_STOP_OUT_AREA);
 			//xRemoveFault(X_STOP_OUT_AREA);
-			{
-				removeFault(A_CLOSE_IN_POSITION);
-				timerEnd(Tb);
-				timerEnd(Tc);
-				timerEnd(Td);
-				inpositionCalled = 0;
-			}
+			
+			removeFault(A_CLOSE_OUT_POSITION);
+			timerEnd(Te);
+			
+			timerEnd(Tc);
+			timerEnd(Td);
+			inpositionCalled = 0;
 			removeFault(A_OPEN_WHILE_RUNNIN);
 			removeFault(A_OPEN_WITHOUT_STOPPIN);
 			//removeFault(A_OVERSPEED);
 			//removeFault(A_CLOSE_FAULT);
+		}else{
+			removeFault(A_CLOSE_IN_POSITION);
+			timerEnd(Tb);
 		}
+			
 		if(status_doorStatus == 0 && status_inPosition == 1) //close and move
 		{
 			removeFault(A_CLOSE_FAULT);
@@ -1905,8 +1911,18 @@ void checkElevatorFault(void)
 			//xRemoveFault(X_CLOSE_PEOPLE);
 
 			timerEnd(Te);
+			timerEnd(Tb);
 			timerEnd(Td);
 			outpositionCalled = 0;
+		}else{
+			if(status_doorStatus == 1){
+				removeFault(A_CLOSE_IN_POSITION);
+				removeFault(A_CLOSE_OUT_POSITION);
+				//xRemoveFault(X_CLOSE_PEOPLE);
+				
+				timerEnd(Te);
+				timerEnd(Tb);
+			}
 		}
 
 		lastPosition = status_inPosition;
