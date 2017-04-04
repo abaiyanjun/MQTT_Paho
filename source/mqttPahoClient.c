@@ -58,12 +58,6 @@ static xTaskHandle      clientTaskHandler            = POINTER_NULL;  // task ha
 static uint8_t clientDataGetFlag = NUMBER_UINT8_ZERO;
 static uint32_t clientMessageId = 0;
 
-#ifdef LIFT_CHECK //byj 
-static xTimerHandle     liftCheckTimerHandle      = POINTER_NULL;  // timer handle for data stream
-static xTaskHandle      liftCheckTaskHandler            = POINTER_NULL;  // task handle for MQTT Client
-
-#endif 
-
 // Subscribe topics variables
 char clientTopicRed[CLIENT_BUFF_SIZE];
 char clientTopicOrange[CLIENT_BUFF_SIZE];
@@ -300,33 +294,6 @@ void clientInit(void)
     }
 #endif
 
-#if 1//def LIFT_CHECK //byj
-
-	retlift = Lift_DriverInit();
-	if(retlift == Lift_STATUS_SUCCESS) {
-		DBG("LIFT USart_2 initialization SUCCESSFUL\r\n");
-	} else {
-		DBG("LIFT USart_2 initialization FAILED\r\n");
-	}
-
-	/* Create Live Data Check */
-    liftCheckTimerHandle = xTimerCreate(
-			(const char * const) "LiftCheckTimer",
-			STREAM_RATE,
-			TIMER_AUTORELOAD_ON,
-			NULL,
-			liftCheckSensorStreamData);
-
-	/* Create MQTT Client Task */
-    rc = xTaskCreate(liftCheckTask, (const char * const) "LiftCheckTask",
-                    		10240, NULL, 1, &liftCheckTaskHandler);
-
-    /* Error Occured Exit App */
-    if(rc < 0)
-    {
-		DBG("liftCheckTask initialization FAILED\r\n");
-    }
-#endif
     return;
 }
 

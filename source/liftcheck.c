@@ -79,6 +79,7 @@ void WDG_feedingWatchdog(void){
 /* additional interface header files */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h" 
 #include "timers.h"
 #include "PTD_portDriver_ph.h"
 #include "PTD_portDriver_ih.h"
@@ -148,8 +149,34 @@ int _gettimeofday( struct timeval *tv, void *tzvp )
 
 #define LIFT_SLEEP_MS(ms)  vTaskDelay((portTickType) ms / portTICK_RATE_MS)
 
+
+static xTimerHandle     liftCheckTimerHandle      = POINTER_NULL;  // timer handle for data stream
+static xTaskHandle      liftCheckTaskHandler      = POINTER_NULL;  // task handle for MQTT Client
+static xTaskHandle      liftWebServerTaskHandler  = POINTER_NULL;  // task handle for MQTT Client
+static xQueueHandle		liftMsgQueueHandle;
+
+
+
 #endif
 
+#define CMD_LEN 1024
+#define CMD_RECV 1024
+#define SEND_LEN 1024
+
+char socketCmdBuf[CMD_LEN];
+char socketCmdRecvBuf[CMD_RECV];
+char socketCmdRecvMsg[CMD_RECV];
+char socketCmdRecvFragment[CMD_RECV];
+
+#define LIFT_SEND_QUEUE_SIZE 					(10)
+#define LIFT_SEND_MAX_PACKET_SIZE 				300  //(SEND_LEN)
+
+struct LIFT_queueSendData_S {
+	uint32_t dataSize;
+	char packetData[LIFT_SEND_MAX_PACKET_SIZE];
+};
+
+typedef struct LIFT_queueSendData_S LIFT_queueSendData_T;
 
 
 #define __DEBUG	//控制开关
@@ -1228,6 +1255,9 @@ unsigned char T05[][TITEMLEN] ={
 char UartBuf[SOCKETBUFSIZE];
 size_t UartBufLen=0;
 
+char FaultArray[100];
+char HttpPostStatusFaultBuffer[SEND_LEN];
+
 
 void getSensorsStatus();
 
@@ -1372,21 +1402,8 @@ counterThreshhold[num] = value;
 }
 */
 
-int fd_ttysac0 = NULL;
-int qstatus;
-
-/*
-struct T_IOData1{//dongzhi
-int IOData1_errorCode;//P0-7,8bits
-int IOData1_inRepairing;//P9
-int IOData1_carDoorOpenFinish;//P12
-int IOData1_hallDoorStatus;//P13
-int IOData1_inPosition;//P15
-int IOData1_directionUp;//P18
-int IOData1_directionDown;//P19
-int IOData1_nowFloor;//P24-P39,16bits
-};
-*/
+static int fd_ttysac0 = NULL;
+static int qstatus;
 
 #define SLIMIT	15
 #define SPEOPLE	16
@@ -1395,6 +1412,14 @@ int IOData1_nowFloor;//P24-P39,16bits
 #define SDOWN	19
 #define SUP		20
 
+static int inpositionCalled = 0;	//flag of being call for CLOSE_IN_POSITION
+static int outpositionCalled = 0;	//flag of being call for CLOSE_OUT_POSITION
+static int inpositionBroadcasted = 0;
+static int outpositionBroadcasted = 0;
+//static int lastDoorStatus = 0;
+//static int lastInPosition = 0;
+static int flag_hitceiling = 0;
+static int flag_hitgroud = 0;
 
 
 int set_SStatus_emergencyLED(int sig)//maybe changed from other sources
@@ -1458,14 +1483,6 @@ int get_EStatus_havingPeople()
 	}
 }
 
-
-void refreshStatus(void)
-{
-	getSensorsStatus();//replaced by signal
-	//DEBUG("Info: all status refreshed^\n");
-}
-
-
 void sensorsStatus_init(void)//It's best to read first
 {
 	pSensorsStatus.SStatus_inPositionUp = S_inPositionUp_ON;//should be on, cause only changed after moving
@@ -1500,13 +1517,6 @@ void elevatorStatus_init()
     pElevatorStatus.EStatus_inPositionBase = 0;
 }
 
-int inpositionCalled = 0;	//flag of being call for CLOSE_IN_POSITION
-int outpositionCalled = 0;	//flag of being call for CLOSE_OUT_POSITION
-int inpositionBroadcasted = 0;
-int outpositionBroadcasted = 0;
-//int lastDoorStatus = 0;
-//int lastInPosition = 0;
-
 
 /*****************************/
 int setFaultSent(int faultNUM)
@@ -1532,7 +1542,7 @@ void setFault(int faultNUM)
 	faultTypeIndi[faultNUM] = 1;
 	DEBUG("***********          Fault: %d        ******\n", faultNUM);	
 #ifdef WIN_PLATFORM
-	getchar();
+	//getchar();
 #endif
 }
 
@@ -1587,8 +1597,6 @@ void makeACall(void){
  * @return(void)
  */
 
-int flag_hitceiling = 0;
-int flag_hitgroud = 0;
 
 /*
  * @brief Allows to encode the provided content, leaving the output on
@@ -1947,14 +1955,6 @@ int httpGet_ServerTime(void)
 	return 0;
 }
 
-#define CMD_LEN 1492
-#define CMD_RECV 1492
-
-char socketCmdBuf[CMD_LEN];
-char socketCmdRecvBuf[CMD_RECV];
-char socketCmdRecvMsg[CMD_RECV];
-char socketCmdRecvFragment[CMD_RECV];
-
 int httpPost_DeviceRegister(void)
 {
 	int Count_MaxNoResponse = 10;
@@ -1963,14 +1963,16 @@ int httpPost_DeviceRegister(void)
 
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
 	sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"mx12345678\"}"SEND);
-	ret = cat1_send((uint16_t*)socketCmdBuf, strlen(socketCmdBuf));
-	if (ret == Cat1_STATUS_SUCCESS) {
-		DEBUG("send data:%s\r\n",socketCmdBuf);
-	} else { 
-		DEBUG("send data is fail!\n");
-		return -1;
-	}
 
+	LIFT_queueSendData_T msg;	
+	memset(&msg, 0, sizeof(msg));
+	msg.dataSize = strlen(socketCmdBuf);
+	memcpy(msg.packetData, socketCmdBuf, strlen(socketCmdBuf));
+#ifndef WIN_PLATFORM
+	if(pdTRUE == xQueueSend( liftMsgQueueHandle, ( void* )&msg, 0 )){
+		DEBUG("%s Send queue successful.", __FUNCTION__);
+	}
+#endif
 	return 0;
 }
 
@@ -1981,22 +1983,35 @@ int httpPost_HeartBeat(void)
 	
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
 	sprintf(socketCmdBuf, SPRE""C2S_CPING""SEND);
-	ret = cat1_send((uint16_t*)socketCmdBuf, strlen(socketCmdBuf));
-
-	DEBUG("httpPost_HeartBeat finished. ret=%d. buf=%s\n", ret, socketCmdBuf);
+	
+	LIFT_queueSendData_T msg;	
+	memset(&msg, 0, sizeof(msg));
+	msg.dataSize = strlen(socketCmdBuf);
+	memcpy(msg.packetData, socketCmdBuf, strlen(socketCmdBuf));
 #ifndef WIN_PLATFORM
-	LIFT_SLEEP_MS(100);
-	memset(socketCmdRecvBuf,0,sizeof(socketCmdRecvBuf));
+	if(pdTRUE == xQueueSend( liftMsgQueueHandle, ( void* )&msg, 0 )){
+		DEBUG("%s Send queue successful.", __FUNCTION__);
+	}
+#endif
+
+	return 0;
+}
+
+int httpPost_HeartBeat_S2C(void)
+{
+	Cat1_return_t ret;
+	int len=0;
 	
-	DEBUG("prepare recv data\n");
+	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
+	sprintf(socketCmdBuf, SPRE""C2S_PING""SEND);
 	
-	ret=cat1_recv(socketCmdRecvBuf,&len);
-	if(ret == Cat1_STATUS_SUCCESS){
-		DEBUG("recv data:%s --len=%d\r\n",socketCmdRecvBuf, len);
-	} else if (ret == Cat1_STATUS_TIMEOUT){
-		DEBUG("recv data timeout ! \r\n");
-	} else {
-		DEBUG("recv data failed ! \r\n");
+	LIFT_queueSendData_T msg;	
+	memset(&msg, 0, sizeof(msg));
+	msg.dataSize = strlen(socketCmdBuf);
+	memcpy(msg.packetData, socketCmdBuf, strlen(socketCmdBuf));
+#ifndef WIN_PLATFORM
+	if(pdTRUE == xQueueSend( liftMsgQueueHandle, ( void* )&msg, 0 )){
+		DEBUG("%s Send queue successful.", __FUNCTION__);
 	}
 #endif
 	return 0;
@@ -2051,12 +2066,12 @@ int httpPost_ProcessServerMsg(unsigned int t)
 
 	ret = cat1_recv((uint16_t*)socketCmdRecvMsg, &len);
 	if(ret == Cat1_STATUS_SUCCESS){
-		DEBUG("servermsg: recv data:%s --len=%d\r\n",socketCmdRecvMsg, len);
+		DEBUG("WebMsg: recv[%d]:>>%s>>\r\n",len,socketCmdRecvMsg);
 	} else if (ret == Cat1_STATUS_TIMEOUT){
-		DEBUG("servermsg: recv data timeout ! \r\n");
+		DEBUG("WebMsg: recv data timeout ! \r\n");
 		return 0;
 	} else {
-		DEBUG("servermsg: recv data failed ! \r\n");
+		DEBUG("WebMsg: recv data failed ! \r\n");
 		return 0;
 	}
 
@@ -2076,13 +2091,12 @@ int httpPost_ProcessServerMsg(unsigned int t)
 		memset(socketCmdRecvFragment,0,sizeof(socketCmdRecvFragment));
 		memcpy(socketCmdRecvFragment, p + strlen(SPRE), q - p - strlen(SEND));
 
-		DEBUG("servermsg>>: %s\r\n", socketCmdRecvFragment);
+		DEBUG("WebMsg: fragment:>>%s>>\r\n", socketCmdRecvFragment);
 		
 		if(strstr(socketCmdRecvFragment, S2C_NEED_LOGIN)){
-			//
 			httpPost_DeviceRegister();
 		}else if(strstr(socketCmdRecvFragment, S2C_PING)){
-			httpPost_HeartBeat();
+			httpPost_HeartBeat_S2C();
 		}else if(strstr(socketCmdRecvFragment, S2C_KICk)){
 
 		}
@@ -2102,12 +2116,11 @@ int httpPost_ProcessServerMsg(unsigned int t)
 	return 0;
 }
 
-char FaultArray[100];
-char HttpPostStatusFaultBuffer[1000];
-
 int httpPost_StatusFault(int c){
 	int f=0;
 	int fault=0;
+	Cat1_return_t ret;
+	int len=0;
 /*
 {
 "type": "info",
@@ -2227,7 +2240,7 @@ fault 故障数组 Eg：[1,2,3]
 		}
 	}
 
-	memset(HttpPostStatusFaultBuffer, 0, 1000);
+	memset(HttpPostStatusFaultBuffer, 0, SEND_LEN);
 	sprintf(HttpPostStatusFaultBuffer, \
 		SPRE"{\
 \"type\": \"info\",\
@@ -2250,13 +2263,21 @@ fault 故障数组 Eg：[1,2,3]
 		status_inmaintenance,
 		FaultArray
 	);
+#if 0
 
-	Cat1_return_t ret;
-	int len=0;
 	
 	ret = cat1_send((uint16_t*)HttpPostStatusFaultBuffer, strlen(HttpPostStatusFaultBuffer));
-
-	DEBUG("httpPost_StatusFault finished. ret=%d. buf=%s\n", ret, HttpPostStatusFaultBuffer);
+#endif 
+	LIFT_queueSendData_T msg;	
+	memset(&msg, 0, sizeof(msg));
+	msg.dataSize = strlen(HttpPostStatusFaultBuffer);
+	memcpy(msg.packetData, HttpPostStatusFaultBuffer, strlen(HttpPostStatusFaultBuffer));
+#ifndef WIN_PLATFORM
+	if(pdTRUE == xQueueSend( liftMsgQueueHandle, ( void* )&msg, 0 )){
+		DEBUG("httpPost_StatusFault Send queue successful.");
+	}
+#endif
+	DEBUG("httpPost_StatusFault OK. buf=%s\n", HttpPostStatusFaultBuffer);
 	return 0;
 }
 
@@ -2328,14 +2349,15 @@ void getSensorsStatus(){
     static int i=0;
     int j=0, k=0;
 	int timeIntervalUsec = 0;
-
-
+	int len=0;
+	char* p=NULL;
+	
     memset(UartBuf, 0, SOCKETBUFSIZE);
 
-#ifdef WIN_PLATFORM
+#if 1 //def WIN_PLATFORM
 
-    if(T03[i][0] != 0x00){
-        memcpy(UartBuf, T03[i], TITEMLEN);
+    if(T04[i][0] != 0x00){
+        memcpy(UartBuf, T04[i], TITEMLEN);
         i++;
     }else{
         i=0;
@@ -2353,118 +2375,133 @@ void getSensorsStatus(){
 	}
 
 #endif 
+	// TODO: 读取buffer做组合处理
 
-	printf("******UART: ");
-	for (k = 0; k<22; k++)
-	{
-		switch (k)
+	UartBufLen = strlen(UartBuf);
+	p = UartBuf;
+	
+	while (*p == 0x7B){
+
+		printf("******UART: ");
+		for (k = 0; k<TITEMLEN; k++)
 		{
-		case 9: //00: 代表第1输入口的状态变化，建议上行传感器
-			printf("  [UP]");
-			break;
-		case 10: //00: 代表第2输入口的状态变化，建议接下行传感器
-			printf("  [DOWN]");
-			break;
-		case 11: //00: 代表第3输入口的状态变化，建议接基站校验传感器
-			printf("  [BASE]");
-			break;
-		case 12: //00: 代表第4输入口的状态变化，建议接门开关传感器
-			printf("  [DOOR]");
-			break;
-		case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
-			printf("  [PEOPLE]");
-			break;
-		case 14: //00: 代表第6输入口的状态变化，建议接极限开关
-			printf("  [LIMIT]");
-			break;
-
-		default:
-			break;
+			switch (k)
+			{
+			case 9: //00: 代表第1输入口的状态变化，建议上行传感器
+				printf("  [UP]");
+				break;
+			case 10: //00: 代表第2输入口的状态变化，建议接下行传感器
+				printf("  [DOWN]");
+				break;
+			case 11: //00: 代表第3输入口的状态变化，建议接基站校验传感器
+				printf("  [BASE]");
+				break;
+			case 12: //00: 代表第4输入口的状态变化，建议接门开关传感器
+				printf("  [DOOR]");
+				break;
+			case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
+				printf("  [PEOPLE]");
+				break;
+			case 14: //00: 代表第6输入口的状态变化，建议接极限开关
+				printf("  [LIMIT]");
+				break;
+		
+			default:
+				break;
+			}
+			printf(" %02X", *(p+k));
 		}
-		printf(" %02X", UartBuf[k]);
-	}
-	printf("******\r\n");
-
-    if(UartBuf[0]!=0x7B || UartBuf[TITEMLEN-1]!=0x7D){
-        return;
-    }
-
-    for(j=9;j<15;j++){
-        switch (j)
-    	{
-		case 9: //00: 代表第1输入口的状态变化，建议上行传感器
-			pSensorsStatus.SStatus_inPositionUp = UartBuf[j];
-			break;
-		case 10: //00: 代表第2输入口的状态变化，建议接下行传感器
-			pSensorsStatus.SStatus_inPositionDown = UartBuf[j];
-			break;
-		case 11: //00: 代表第3输入口的状态变化，建议接基站校验传感器
-			pSensorsStatus.SStatus_baseStation = UartBuf[j];
-			break;
-		case 12: //00: 代表第4输入口的状态变化，建议接门开关传感器
-			pSensorsStatus.SStatus_doorOpen = UartBuf[j];
-			break;
-		case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
-			pSensorsStatus.SStatus_havingPeople = UartBuf[j];
-			break;
-		case 14: //00: 代表第6输入口的状态变化，建议接极限开关
-			pSensorsStatus.SStatus_limitSwitch = UartBuf[j];
-			break;
-
-    	default:
-    		break;
-    	}
-    }
-
-	//根据上下行传感器确定电梯运行方向
-    if(pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
-		&& pSensorsStatus.SStatus_inPositionDown == S_inPositionDown_OFF){
-        pElevatorStatus.EStatus_inPosition = 1;//not flat floor
-		gettimeofday(&tv_speed2, NULL);
-		if ((timeIntervalUsec = tv_cmp(tv_speed2, tv_speed1)) > 0)
-		{
-			pElevatorStatus.EStatus_speed = TIME_UNIT * UpDownDistance / timeIntervalUsec;
-			//DEBUG("**** speed is %f ****\n",pElevatorStatus.EStatus_speed);
+		printf("******\r\n");
+		
+		if(*p!=0x7B || *(p+TITEMLEN-1)!=0x7D){
+			return;
 		}
-	}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
-			&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
-		if(pElevatorStatus.EStatus_direction ==1){//up
-    		if (pElevatorStatus.EStatus_currentFloor < Lmax) pElevatorStatus.EStatus_currentFloor++;
-    		if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor = 1;
-		}else if(pElevatorStatus.EStatus_direction ==2){//down
-    		if (pElevatorStatus.EStatus_currentFloor > Lmin) pElevatorStatus.EStatus_currentFloor--;
-    		if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor = 1;
+		
+		for(j=9;j<15;j++){
+			switch (j)
+			{
+			case 9: //00: 代表第1输入口的状态变化，建议上行传感器
+				pSensorsStatus.SStatus_inPositionUp = *(p+j);
+				break;
+			case 10: //00: 代表第2输入口的状态变化，建议接下行传感器
+				pSensorsStatus.SStatus_inPositionDown = *(p+j);
+				break;
+			case 11: //00: 代表第3输入口的状态变化，建议接基站校验传感器
+				pSensorsStatus.SStatus_baseStation = *(p+j);
+				break;
+			case 12: //00: 代表第4输入口的状态变化，建议接门开关传感器
+				pSensorsStatus.SStatus_doorOpen = *(p+j);
+				break;
+			case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
+				pSensorsStatus.SStatus_havingPeople = *(p+j);
+				break;
+			case 14: //00: 代表第6输入口的状态变化，建议接极限开关
+				pSensorsStatus.SStatus_limitSwitch = *(p+j);
+				break;
+		
+			default:
+				break;
+			}
 		}
-		pElevatorStatus.EStatus_direction = 0; //0:stop, 1:up, 2:down
-		pElevatorStatus.EStatus_inPosition = 0;//flat floor
-		gettimeofday(&tv_speed1, NULL);
+		
+		//根据上下行传感器确定电梯运行方向
+		if(pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
+			&& pSensorsStatus.SStatus_inPositionDown == S_inPositionDown_OFF){
+			pElevatorStatus.EStatus_inPosition = 1;//not flat floor
+			gettimeofday(&tv_speed2, NULL);
+			if ((timeIntervalUsec = tv_cmp(tv_speed2, tv_speed1)) > 0)
+			{
+				pElevatorStatus.EStatus_speed = TIME_UNIT * UpDownDistance / timeIntervalUsec;
+				//DEBUG("**** speed is %f ****\n",pElevatorStatus.EStatus_speed);
+			}
+		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
+				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
+			if(pElevatorStatus.EStatus_direction ==1){//up
+				if (pElevatorStatus.EStatus_currentFloor < Lmax) pElevatorStatus.EStatus_currentFloor++;
+				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor = 1;
+			}else if(pElevatorStatus.EStatus_direction ==2){//down
+				if (pElevatorStatus.EStatus_currentFloor > Lmin) pElevatorStatus.EStatus_currentFloor--;
+				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor = 1;
+			}
+			pElevatorStatus.EStatus_direction = 0; //0:stop, 1:up, 2:down
+			pElevatorStatus.EStatus_inPosition = 0;//flat floor
+			gettimeofday(&tv_speed1, NULL);
+		
+		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
+				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_OFF){
+			gettimeofday(&tv_speed1, NULL);
+			pElevatorStatus.EStatus_direction = 2;//0:stop, 1:up, 2:down
+			pElevatorStatus.EStatus_inPosition = 1;//not flat floor
+		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
+				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
+			gettimeofday(&tv_speed1, NULL);
+			pElevatorStatus.EStatus_inPosition = 1;//not flat floor
+			pElevatorStatus.EStatus_direction = 1;//0:stop, 1:up, 2:down
+		}
+		
+		pElevatorStatus.EStatus_powerStatus = get_EStatus_powerStatus();
+		pElevatorStatus.EStatus_havingPeople = get_EStatus_havingPeople();
+		pElevatorStatus.EStatus_doorStatus = get_EStatus_doorStatus();
+		//pElevatorStatus.EStatus_inPosition = get_EStatus_inPosition();
+		
+		if(pSensorsStatus.SStatus_baseStation==1){
+			pElevatorStatus.EStatus_currentFloor = Lbase;
+			pElevatorStatus.EStatus_inPositionBase = 1; //基站
+			currentFloorRefreshed = 1;
+		}
+		else{
+			pElevatorStatus.EStatus_inPositionBase = 0;//非基站
+			currentFloorRefreshed = 0;
+		}
 
-	}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
-			&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_OFF){
-		gettimeofday(&tv_speed1, NULL);
-		pElevatorStatus.EStatus_direction = 2;//0:stop, 1:up, 2:down
-		pElevatorStatus.EStatus_inPosition = 1;//not flat floor
-	}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
-			&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
-		gettimeofday(&tv_speed1, NULL);
-		pElevatorStatus.EStatus_inPosition = 1;//not flat floor
-		pElevatorStatus.EStatus_direction = 1;//0:stop, 1:up, 2:down
-	}
 
-	pElevatorStatus.EStatus_powerStatus = get_EStatus_powerStatus();
-	pElevatorStatus.EStatus_havingPeople = get_EStatus_havingPeople();
-    pElevatorStatus.EStatus_doorStatus = get_EStatus_doorStatus();
-    //pElevatorStatus.EStatus_inPosition = get_EStatus_inPosition();
 
-	if(pSensorsStatus.SStatus_baseStation==1){
-		pElevatorStatus.EStatus_currentFloor = Lbase;
-		pElevatorStatus.EStatus_inPositionBase = 1; //基站
-		currentFloorRefreshed = 1;
+
+		//如果有多条io uart 数据, 循环处理
+		p+=TITEMLEN;
 	}
-	else{
-		pElevatorStatus.EStatus_inPositionBase = 0;//非基站
-		currentFloorRefreshed = 0;
-	}
+	
+
 
     return;
 }
@@ -2474,7 +2511,7 @@ void getSensorsStatus(){
 
 int CheckLiftStatus(void){
  	static int count=0;
-	DEBUG("liftCheckTask\r\n");
+	DEBUG("%s()\r\n", __FUNCTION__);
 
 	sensorsStatus_init();
 	elevatorStatus_init();
@@ -2484,30 +2521,21 @@ int CheckLiftStatus(void){
 		WDG_feedingWatchdog();
 		count++;
 
-		INFO("**[%d]**\n", count);
-
-#ifndef WIN_PLATFORM
-		httpPost_ProcessServerMsg(count);
-#endif
+		DEBUG("**[%d]**\n", count);
 		
 		if(count<10){
 			LIFT_SLEEP_MS(100);
 			continue;
 		}
-		if(count==10){
-			INFO("httpPost_DeviceRegister at %d\n", count);
-			//httpPost_DeviceRegister();
-			LIFT_SLEEP_MS(100);
-			continue;
-		}
-		if(count%10==0){
+	
+		if(count%20==0){
 			//send heart beat
-			INFO("send heart beat at %d\n", count);
+			DEBUG("send heart beat at %d\n", count);
 			httpPost_HeartBeat();
 		}
 		
 		/*refresh status of all sensors*/
-		refreshStatus();
+		getSensorsStatus();
 
 		/*check faults when elevator not in a repairing*/
 
@@ -2646,7 +2674,7 @@ void testsocket(void){
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	initSocket("114.55.42.28", 25500);
+	initSocket("114.55.42.28", 26500);
 	//testsocket();
 
 
@@ -2662,22 +2690,56 @@ int _tmain(int argc, _TCHAR* argv[])
 
 #else
 
+//*************************************************************************
 
-static xTimerHandle     liftCheckTimerHandle      = POINTER_NULL;  // timer handle for data stream
-static xTaskHandle      liftCheckTaskHandler            = POINTER_NULL;  // task handle for MQTT Client
+
 
 void liftCheckSensorStreamData(xTimerHandle pvParameters)
 {
-	printf("liftCheckSensorStreamData\r\n");
+	DEBUG("%s()\r\n", __FUNCTION__);
 }
 
 
+void liftWebServerTask(void *pvParameters)
+{
+	static uint32_t count=0;
+ 	LIFT_queueSendData_T msg;	
+	Cat1_return_t ret;
+	int len=0;
+	
+	DEBUG("%s()\r\n", __FUNCTION__);
+
+	for(;;)  
+    {  
+		count++;
+		
+		DEBUG("%s(%d)\r\n", __FUNCTION__, count);
+		
+		//先处理接收数据
+		httpPost_ProcessServerMsg(count);
+
+		//后处理发送数据
+		memset(&msg, 0, sizeof(msg));
+        if(xQueueReceive( liftMsgQueueHandle, &msg, 10/portTICK_RATE_MS ) == pdPASS)  
+        {  
+            DEBUG("WebMsg: send:[%d]**%s**\r\n",msg.dataSize, msg.packetData);  
+			
+			ret = cat1_send((uint16_t*) msg.packetData, msg.dataSize);
+			if (ret == Cat1_STATUS_SUCCESS) {
+				DEBUG("WebMsg: send data OK :**%s**\r\n",msg.packetData);
+			} else { 
+				DEBUG("WebMsg: send data FAIL!\n");
+			}			
+        }
+    }  	
+	return;
+}
 
 
 void liftCheckTask(void *pvParameters)
 {
  	static int count=0;
-	DEBUG("liftCheckTask\r\n");
+	DEBUG("%s()\r\n", __FUNCTION__);
 	
 	CheckLiftStatus();
 	
@@ -2691,23 +2753,39 @@ void liftCheckClientInit(void)
 	Lift_return_t retlift;
 	/* Initialize Variables */
     int rc = 0;
-//    NewNetwork(&n);
 
-	ret=cat1_server_init(CAT1_SERVER_IP,CAT1_SERVER_PORT);
+	DEBUG("%s()\r\n", __FUNCTION__);
+
+ 	ret=cat1_server_init(CAT1_SERVER_IP,CAT1_SERVER_PORT);
 	if (ret != Cat1_STATUS_SUCCESS )
 	{
-		printf("cat1 init failed\r\n");
+		DEBUG("cat1 init failed\r\n");
 		return;
+	}else{
+		DEBUG("Cat1 init Success!\r\n");
 	}
-	printf("Cat1 init Success!\r\n");
+	
+	liftMsgQueueHandle = xQueueCreate( LIFT_SEND_QUEUE_SIZE , sizeof( LIFT_queueSendData_T ) );  
+	if (liftMsgQueueHandle == NULL)
+    {
+        DEBUG("liftMsgQueueHandle Send Queue could not be created");
+		return;
+    }else{
+        DEBUG("liftMsgQueueHandle Send Queue OK!");
+    }
+
+
+
 
 	retlift = Lift_DriverInit();
 	if(retlift == Lift_STATUS_SUCCESS) {
-		DBG("LIFT USart_2 initialization SUCCESSFUL\r\n");
+		DEBUG("LIFT USart_2 initialization SUCCESSFUL\r\n");
 	} else {
-		DBG("LIFT USart_2 initialization FAILED\r\n");
+		DEBUG("LIFT USart_2 initialization FAILED\r\n");
+		return;
 	}
 
+#if 0
 	/* Create Live Data Check */
     liftCheckTimerHandle = xTimerCreate(
 			(const char * const) "LiftCheckTimer",
@@ -2715,16 +2793,31 @@ void liftCheckClientInit(void)
 			TIMER_AUTORELOAD_ON,
 			NULL,
 			liftCheckSensorStreamData);
+#endif
 
-	/* Create MQTT Client Task */
     rc = xTaskCreate(liftCheckTask, (const char * const) "LiftCheckTask",
-                    		10240, NULL, 1, &liftCheckTaskHandler);
+                    		1024*5, NULL, 1, &liftCheckTaskHandler);
 
     /* Error Occured Exit App */
     if(rc < 0)
     {
-		DBG("liftCheckTask initialization FAILED\r\n");
+		DEBUG("liftCheckTask initialization FAILED\r\n");
+		return;
+    }else{
+		DEBUG("liftCheckTask initialization OK\r\n");
     }
+
+    rc = xTaskCreate(liftWebServerTask, (const char * const) "liftWebServerTask",
+                    		1024*5, NULL, 1, &liftWebServerTaskHandler);
+
+    /* Error Occured Exit App */
+    if(rc < 0)
+    {
+		DEBUG("liftWebServerTask initialization FAILED\r\n");
+		return;
+	}else{
+			DEBUG("liftWebServerTask initialization OK\r\n");
+	}
     return;
 }
 
