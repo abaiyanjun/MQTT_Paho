@@ -371,7 +371,7 @@ typedef unsigned char UCHAR8;
 #define Tk 10 //（保留）,//having people25
 #define Tl 11 //（保留）
 #define Tm 12 //停车时开门时间计时器80
-#define Tn 13 //（保留）
+#define Tn 13 //（保留）//人感定时器,不及时检测, 等待 10s
 
 int Cg = 0; //运行中开门过层层数计数器 1//not used now
 int Ci = 0; //开门走车过层层数计数器  1//not used now
@@ -389,7 +389,7 @@ int Sn = 12; //超速倍数定义1.2*1.8=2.2
 int Sl = 2; //超速过层层数 //use local varible l later
 int Si = 20;
 int Lbase = 1; //number of base floor
-int Lmax = 3; //number of max floor
+int Lmax = 14; //number of max floor
 int Lmin = -1; //number of min floor
 
 /*structures*/
@@ -461,8 +461,8 @@ int lastDown = 0;
 int lastPosition = 9;  //here 9 means uncertain
 int lastDoor = 9;
 int lastDirection = 9;
+int lastSStatus_havingPeople=0;
 
-int BaseFloor = 1;
 float UpDownDistance=0.1;
 
 float overSpeed_speed = 0;
@@ -497,7 +497,7 @@ int wsTimer = 0;
 int timers[14] = { 0 };
 //int timerThreshhold[14] = { 30, 60, 30, 300, 60, 30, 30, 30, 30, 30, 20, 30, 30, 30 }; //default values, change Td to 300, JC, 20160430
 ///////////////////////////  Ta, Tb, Tc, Td,  Te, Tf,  Tg, Th, Ti, Tj, Tk, Tl, Tm, Tn
-int timerThreshhold[14] =  { 20, 20, 20, 100, 20, 30, 20, 20, 20, 20, 20, 20, 60, 20 }; //default values, change Td to 300, JC, 20160430
+int timerThreshhold[14] =  { 20, 20, 20, 100, 20, 30, 20, 20, 20, 20, 20, 20, 60, 10 }; //default values, change Td to 300, JC, 20160430
 int time_StreamCloud = 300;
 int parent_id_StreamCloud_int = 0;
 const char *parent_id_StreamCloud_string;
@@ -1253,7 +1253,6 @@ unsigned char T05[][TITEMLEN] ={
 
 
 char UartBuf[SOCKETBUFSIZE];
-size_t UartBufLen=0;
 
 char FaultArray[100];
 char HttpPostStatusFaultBuffer[SEND_LEN];
@@ -2066,7 +2065,7 @@ int httpPost_ProcessServerMsg(unsigned int t)
 
 	ret = cat1_recv((uint16_t*)socketCmdRecvMsg, &len);
 	if(ret == Cat1_STATUS_SUCCESS){
-		DEBUG("WebMsg: recv[%d]:>>%s>>\r\n",len,socketCmdRecvMsg);
+		DEBUG("WebMsg: recv[%d]:>>%s<<\r\n",len,socketCmdRecvMsg);
 	} else if (ret == Cat1_STATUS_TIMEOUT){
 		DEBUG("WebMsg: recv data timeout ! \r\n");
 		return 0;
@@ -2091,7 +2090,7 @@ int httpPost_ProcessServerMsg(unsigned int t)
 		memset(socketCmdRecvFragment,0,sizeof(socketCmdRecvFragment));
 		memcpy(socketCmdRecvFragment, p + strlen(SPRE), q - p - strlen(SEND));
 
-		DEBUG("WebMsg: fragment:>>%s>>\r\n", socketCmdRecvFragment);
+		DEBUG("WebMsg: fragment:>>%s<<\r\n", socketCmdRecvFragment);
 		
 		if(strstr(socketCmdRecvFragment, S2C_NEED_LOGIN)){
 			httpPost_DeviceRegister();
@@ -2277,7 +2276,7 @@ fault 故障数组 Eg：[1,2,3]
 		DEBUG("httpPost_StatusFault Send queue successful.");
 	}
 #endif
-	DEBUG("httpPost_StatusFault OK. buf=%s\n", HttpPostStatusFaultBuffer);
+	DEBUG("******httpPost_StatusFault OK. buf=**%s**\n", HttpPostStatusFaultBuffer);
 	return 0;
 }
 
@@ -2351,10 +2350,11 @@ void getSensorsStatus(){
 	int timeIntervalUsec = 0;
 	int len=0;
 	char* p=NULL;
+	int c=0;
 	
     memset(UartBuf, 0, SOCKETBUFSIZE);
 
-#if 1 //def WIN_PLATFORM
+#ifdef WIN_PLATFORM
 
     if(T04[i][0] != 0x00){
         memcpy(UartBuf, T04[i], TITEMLEN);
@@ -2377,12 +2377,12 @@ void getSensorsStatus(){
 #endif 
 	// TODO: 读取buffer做组合处理
 
-	UartBufLen = strlen(UartBuf);
 	p = UartBuf;
 	
 	while (*p == 0x7B){
+		c++;
 
-		printf("******UART: ");
+		printf("******UART: [%d]", c);
 		for (k = 0; k<TITEMLEN; k++)
 		{
 			switch (k)
@@ -2433,7 +2433,19 @@ void getSensorsStatus(){
 				pSensorsStatus.SStatus_doorOpen = *(p+j);
 				break;
 			case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
-				pSensorsStatus.SStatus_havingPeople = *(p+j);
+			{
+				if(timerRead(Tn) == 0){
+					timerStart(Tn);
+					pSensorsStatus.SStatus_havingPeople = *(p+j);
+					lastSStatus_havingPeople = pSensorsStatus.SStatus_havingPeople;
+				}
+				if(timerCheck(Tn)>= timerGetThreshhold(Tn)){
+					pSensorsStatus.SStatus_havingPeople = *(p+j);
+					lastSStatus_havingPeople = pSensorsStatus.SStatus_havingPeople;
+					timerEnd(Tn);
+					timerStart(Tn);
+				}
+			}
 				break;
 			case 14: //00: 代表第6输入口的状态变化，建议接极限开关
 				pSensorsStatus.SStatus_limitSwitch = *(p+j);
@@ -2447,7 +2459,7 @@ void getSensorsStatus(){
 		//根据上下行传感器确定电梯运行方向
 		if(pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
 			&& pSensorsStatus.SStatus_inPositionDown == S_inPositionDown_OFF){
-			pElevatorStatus.EStatus_inPosition = 1;//not flat floor
+			//pElevatorStatus.EStatus_inPosition = 1;//not flat floor
 			gettimeofday(&tv_speed2, NULL);
 			if ((timeIntervalUsec = tv_cmp(tv_speed2, tv_speed1)) > 0)
 			{
@@ -2458,10 +2470,10 @@ void getSensorsStatus(){
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
 			if(pElevatorStatus.EStatus_direction ==1){//up
 				if (pElevatorStatus.EStatus_currentFloor < Lmax) pElevatorStatus.EStatus_currentFloor++;
-				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor = 1;
+				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor++;
 			}else if(pElevatorStatus.EStatus_direction ==2){//down
 				if (pElevatorStatus.EStatus_currentFloor > Lmin) pElevatorStatus.EStatus_currentFloor--;
-				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor = 1;
+				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor--;
 			}
 			pElevatorStatus.EStatus_direction = 0; //0:stop, 1:up, 2:down
 			pElevatorStatus.EStatus_inPosition = 0;//flat floor
@@ -2706,6 +2718,8 @@ void liftWebServerTask(void *pvParameters)
  	LIFT_queueSendData_T msg;	
 	Cat1_return_t ret;
 	int len=0;
+	int c=0;
+#define RETRY_MAX 10	
 	
 	DEBUG("%s()\r\n", __FUNCTION__);
 
@@ -2723,14 +2737,20 @@ void liftWebServerTask(void *pvParameters)
         if(xQueueReceive( liftMsgQueueHandle, &msg, 10/portTICK_RATE_MS ) == pdPASS)  
         {  
             DEBUG("WebMsg: send:[%d]**%s**\r\n",msg.dataSize, msg.packetData);  
-			
-			ret = cat1_send((uint16_t*) msg.packetData, msg.dataSize);
-			if (ret == Cat1_STATUS_SUCCESS) {
-				DEBUG("WebMsg: send data OK :**%s**\r\n",msg.packetData);
-			} else { 
-				DEBUG("WebMsg: send data FAIL!\n");
-			}			
+			c=0;
+			do{
+				ret = cat1_send((uint16_t*) msg.packetData, msg.dataSize);
+				if (ret == Cat1_STATUS_SUCCESS) {
+					DEBUG("WebMsg: send data OK :**%s**\r\n",msg.packetData);
+					break;
+				} else { 
+					c++;
+					DEBUG("WebMsg: send data FAIL! Try [%d] times.\n", c);
+					LIFT_SLEEP_MS(100);
+				}
+			}while(c<RETRY_MAX);
         }
+		LIFT_SLEEP_MS(500);
     }  	
 	return;
 }
@@ -2760,7 +2780,7 @@ void liftCheckClientInit(void)
 	if (ret != Cat1_STATUS_SUCCESS )
 	{
 		DEBUG("cat1 init failed\r\n");
-		return;
+		//return;
 	}else{
 		DEBUG("Cat1 init Success!\r\n");
 	}
