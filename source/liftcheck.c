@@ -389,7 +389,7 @@ int Sn = 12; //超速倍数定义1.2*1.8=2.2
 int Sl = 2; //超速过层层数 //use local varible l later
 int Si = 20;
 int Lbase = 1; //number of base floor
-int Lmax = 14; //number of max floor
+int Lmax = 100; //number of max floor
 int Lmin = -1; //number of min floor
 
 /*structures*/
@@ -560,6 +560,9 @@ int connectVideoLost = 1;
 #define C2S_CPING  "{\"type\":\"cping\"}"
 #define C2S_LOGIN  "{\"type\":\"login\",\"eid\":\"%s\"}"
 #define S2C_LOGIN  "{\"type\":\"login\",\"res_id\":"
+
+#define C2S_CPING_TIMEOUT    100
+#define S2C_PING_TIMEOUT    100
 
 
 #define SECOND 1
@@ -1954,15 +1957,26 @@ int httpGet_ServerTime(void)
 	return 0;
 }
 
+static char IMEI_BUF[100];
 int httpPost_DeviceRegister(void)
 {
 	int Count_MaxNoResponse = 10;
 	Cat1_return_t ret;
 	int len=0;
 
+	memset(IMEI_BUF, 0, 100);
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
-	sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"mx12345678\"}"SEND);
-
+	
+	ret= cat1_get_IMEI(IMEI_BUF);
+	
+	DEBUG("%s IMEI_BUF=**%s**, ret=%d\n", __FUNCTION__, IMEI_BUF, ret);
+	ret = Cat1_STATUS_FAILED;//for debug
+	if(ret == Cat1_STATUS_SUCCESS){
+		sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"%s\"}"SEND, IMEI_BUF);
+	}else{
+		sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"mx12345678\"}"SEND);
+	}
+	
 	LIFT_queueSendData_T msg;	
 	memset(&msg, 0, sizeof(msg));
 	msg.dataSize = strlen(socketCmdBuf);
@@ -1973,6 +1987,24 @@ int httpPost_DeviceRegister(void)
 	}
 #endif
 	return 0;
+}
+
+int httpPost_DeviceRegisterRsp(char* rsp){
+	DEBUG("%s rsp=>>%s<<", __FUNCTION__, rsp);
+	JSON_Value *val1 = json_parse_string(rsp);
+	JSON_Object *obj1 = NULL;
+
+	obj1 = json_value_get_object(val1);
+	int resid = (int)json_object_get_number(obj1, "res_id");
+	json_value_free(val1);
+
+	DEBUG("%s resid=>>%d<<", __FUNCTION__, resid);
+	if(resid==0){
+		return 0;
+	}else{
+		// TODO: retry ? httpPost_DeviceRegister();
+		return 1;
+	}
 }
 
 int httpPost_HeartBeat(void)
@@ -2096,7 +2128,11 @@ int httpPost_ProcessServerMsg(unsigned int t)
 			httpPost_DeviceRegister();
 		}else if(strstr(socketCmdRecvFragment, S2C_PING)){
 			httpPost_HeartBeat_S2C();
+		}else if(strstr(socketCmdRecvFragment, S2C_LOGIN)){
+			httpPost_DeviceRegisterRsp(socketCmdRecvFragment);
 		}else if(strstr(socketCmdRecvFragment, S2C_KICk)){
+
+		}else if(strstr(socketCmdRecvFragment, S2C_CPING)){
 
 		}
 
@@ -2273,10 +2309,12 @@ fault 故障数组 Eg：[1,2,3]
 	memcpy(msg.packetData, HttpPostStatusFaultBuffer, strlen(HttpPostStatusFaultBuffer));
 #ifndef WIN_PLATFORM
 	if(pdTRUE == xQueueSend( liftMsgQueueHandle, ( void* )&msg, 0 )){
-		DEBUG("httpPost_StatusFault Send queue successful.");
+		DEBUG("******httpPost_StatusFault xQueueSend OK. buf=**%s**\n", HttpPostStatusFaultBuffer);
+	}else{
+		DEBUG("******httpPost_StatusFault xQueueSend FAIL.");
 	}
 #endif
-	DEBUG("******httpPost_StatusFault OK. buf=**%s**\n", HttpPostStatusFaultBuffer);
+	//DEBUG("******httpPost_StatusFault OK. buf=**%s**\n", HttpPostStatusFaultBuffer);
 	return 0;
 }
 
@@ -2736,21 +2774,21 @@ void liftWebServerTask(void *pvParameters)
 		memset(&msg, 0, sizeof(msg));
         if(xQueueReceive( liftMsgQueueHandle, &msg, 10/portTICK_RATE_MS ) == pdPASS)  
         {  
-            DEBUG("WebMsg: send:[%d]**%s**\r\n",msg.dataSize, msg.packetData);  
+            DEBUG("WebMsg: send:[%d]++%s++\r\n",msg.dataSize, msg.packetData);  
 			c=0;
 			do{
 				ret = cat1_send((uint16_t*) msg.packetData, msg.dataSize);
 				if (ret == Cat1_STATUS_SUCCESS) {
-					DEBUG("WebMsg: send data OK :**%s**\r\n",msg.packetData);
+					DEBUG("WebMsg: send data OK :++%s++\r\n",msg.packetData);
 					break;
 				} else { 
 					c++;
 					DEBUG("WebMsg: send data FAIL! Try [%d] times.\n", c);
-					LIFT_SLEEP_MS(100);
+					LIFT_SLEEP_MS(10);
 				}
 			}while(c<RETRY_MAX);
         }
-		LIFT_SLEEP_MS(500);
+		LIFT_SLEEP_MS(10);
     }  	
 	return;
 }
@@ -2777,10 +2815,12 @@ void liftCheckClientInit(void)
 	DEBUG("%s()\r\n", __FUNCTION__);
 
  	ret=cat1_server_init(CAT1_SERVER_IP,CAT1_SERVER_PORT);
+
+ 	//ret=cat1_server_init("121.196.219.49","26500");
 	if (ret != Cat1_STATUS_SUCCESS )
 	{
 		DEBUG("cat1 init failed\r\n");
-		//return;
+		return;
 	}else{
 		DEBUG("Cat1 init Success!\r\n");
 	}

@@ -46,7 +46,7 @@
 //#define			AT_CMD_PORT				"\"1883\""
 
 #define         AT_CMD_IP					"\"114.55.42.28\""
-#define			AT_CMD_PORT				"\"25500\""
+#define			AT_CMD_PORT				"\"26500\""
 
 
 

@@ -78,6 +78,7 @@ void appInitSystem(xTimerHandle xTimer)
     //byj buttonInit();
 
     //byj WDG_init(WDG_FREQ, WDG_TIMEOUT);
+    WDG_init(WDG_FREQ, 300000);
 
     /* Turn ON Orange LED to indicate Initialization Complete */
     PTD_pinOutSet(PTD_PORT_LED_ORANGE, PTD_PIN_LED_ORANGE);

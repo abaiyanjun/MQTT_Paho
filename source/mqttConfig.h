@@ -51,13 +51,13 @@
 //#define MQTT_BROKER_NAME    "113.59.226.244"  /**< MQTT Broker */
 //#define MQTT_PORT           1883                          /**< MQTT Port Number */
 #define MQTT_BROKER_NAME    "114.55.42.28"  /**< MQTT Broker */
-#define MQTT_PORT           25500                          /**< MQTT Port Number */
+#define MQTT_PORT           26500                          /**< MQTT Port Number */
 
 /***cat1 server ip and port**/
 //#define CAT1_SERVER_IP					"\"113.59.226.244\""
 //#define	CAT1_SERVER_PORT				"\"1883\""
 #define CAT1_SERVER_IP					"\"114.55.42.28\""
-#define	CAT1_SERVER_PORT				"\"25500\""
+#define	CAT1_SERVER_PORT				"\"26500\""
 
 
 // Default Data Configuration Settings
