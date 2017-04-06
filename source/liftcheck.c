@@ -561,9 +561,11 @@ int connectVideoLost = 1;
 #define C2S_LOGIN  "{\"type\":\"login\",\"eid\":\"%s\"}"
 #define S2C_LOGIN  "{\"type\":\"login\",\"res_id\":"
 
-#define C2S_CPING_TIMEOUT    100
-#define S2C_PING_TIMEOUT    100
+#define S2C_PING_COUNT_MAX    100
+unsigned int S2C_PING_COUNT=0;
 
+#define C2S_CPING_COUNT_MAX    100
+unsigned int C2S_CPING_COUNT=0;
 
 #define SECOND 1
 #define USECOND 0
@@ -2024,7 +2026,10 @@ int httpPost_HeartBeat(void)
 		DEBUG("%s Send queue successful.", __FUNCTION__);
 	}
 #endif
-
+	C2S_CPING_COUNT++;
+	if(C2S_CPING_COUNT>C2S_CPING_COUNT_MAX){
+		// TODO:  lost connection, reboot xdk and cat1
+	}
 	return 0;
 }
 
@@ -2133,7 +2138,9 @@ int httpPost_ProcessServerMsg(unsigned int t)
 		}else if(strstr(socketCmdRecvFragment, S2C_KICk)){
 
 		}else if(strstr(socketCmdRecvFragment, S2C_CPING)){
-
+			if(C2S_CPING_COUNT>0){
+				C2S_CPING_COUNT--;
+			}
 		}
 
 		//next 
@@ -2472,6 +2479,9 @@ void getSensorsStatus(){
 				break;
 			case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
 			{
+#if 1
+				pSensorsStatus.SStatus_havingPeople = *(p+j);
+#else
 				if(timerRead(Tn) == 0){
 					timerStart(Tn);
 					pSensorsStatus.SStatus_havingPeople = *(p+j);
@@ -2483,6 +2493,7 @@ void getSensorsStatus(){
 					timerEnd(Tn);
 					timerStart(Tn);
 				}
+#endif				
 			}
 				break;
 			case 14: //00: 代表第6输入口的状态变化，建议接极限开关
