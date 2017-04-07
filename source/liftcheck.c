@@ -562,7 +562,7 @@ int connectVideoLost = 1;
 #define S2C_LOGIN  "{\"type\":\"login\",\"res_id\":"
 
 #define S2C_PING_COUNT_MAX    100
-unsigned int S2C_PING_COUNT=0;
+unsigned int S2C_PING_COUNT=1;
 
 #define C2S_CPING_COUNT_MAX    100
 unsigned int C2S_CPING_COUNT=0;
@@ -1391,7 +1391,10 @@ void timerEndAudio(void)
 	timerAudio = 0;
 }
 
-
+void rebootXDK(char* where){
+	DEBUG("%s() where=%s\r\n", __FUNCTION__, where);
+	//assert(0);
+}
 
 
 /*
@@ -2029,6 +2032,7 @@ int httpPost_HeartBeat(void)
 	C2S_CPING_COUNT++;
 	if(C2S_CPING_COUNT>C2S_CPING_COUNT_MAX){
 		// TODO:  lost connection, reboot xdk and cat1
+		rebootXDK(__FUNCTION__);
 	}
 	return 0;
 }
@@ -2037,6 +2041,8 @@ int httpPost_HeartBeat_S2C(void)
 {
 	Cat1_return_t ret;
 	int len=0;
+	
+	S2C_PING_COUNT++;
 	
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
 	sprintf(socketCmdBuf, SPRE""C2S_PING""SEND);
@@ -2283,6 +2289,7 @@ fault 故障数组 Eg：[1,2,3]
 	}
 
 	memset(HttpPostStatusFaultBuffer, 0, SEND_LEN);
+#if 1	
 	sprintf(HttpPostStatusFaultBuffer, \
 		SPRE"{\
 \"type\": \"info\",\
@@ -2305,9 +2312,22 @@ fault 故障数组 Eg：[1,2,3]
 		status_inmaintenance,
 		FaultArray
 	);
-#if 0
+#else
 
+	sprintf(HttpPostStatusFaultBuffer, \
+		SPRE"{\"type\":\"info\",\"data\":{\"direction\":%d,\"inposition\":%d,\"floor\":%d,\"door\":%d,\"haspeople\":%d,\"reparing\":%d,\"inmaintenance\":%d,\"fault\":[%s]}}"SEND, 
+			status_direction,
+			status_inPosition,
+			status_currentFloor,
+			status_doorStatus,
+			status_havingPeople,
+			status_reparing,
+			status_inmaintenance,
+			FaultArray
+		);
+#endif
 	
+#if 0
 	ret = cat1_send((uint16_t*)HttpPostStatusFaultBuffer, strlen(HttpPostStatusFaultBuffer));
 #endif 
 	LIFT_queueSendData_T msg;	
@@ -2752,12 +2772,19 @@ int _tmain(int argc, _TCHAR* argv[])
 #else
 
 //*************************************************************************
+#define HEART_BEAT_RATE         60000/portTICK_RATE_MS
 
 
 
-void liftCheckSensorStreamData(xTimerHandle pvParameters)
+void liftCheckHeartBeatTimer(xTimerHandle pvParameters)
 {
-	DEBUG("%s()\r\n", __FUNCTION__);
+	DEBUG("%s() S2C_PING_COUNT=%d\r\n", __FUNCTION__, S2C_PING_COUNT);
+	if(S2C_PING_COUNT){
+		S2C_PING_COUNT = 0;
+	}else{
+		// TODO: reboot xdk 
+		rebootXDK(__FUNCTION__);
+	}
 }
 
 
@@ -2845,9 +2872,6 @@ void liftCheckClientInit(void)
         DEBUG("liftMsgQueueHandle Send Queue OK!");
     }
 
-
-
-
 	retlift = Lift_DriverInit();
 	if(retlift == Lift_STATUS_SUCCESS) {
 		DEBUG("LIFT USart_2 initialization SUCCESSFUL\r\n");
@@ -2856,15 +2880,13 @@ void liftCheckClientInit(void)
 		return;
 	}
 
-#if 0
 	/* Create Live Data Check */
     liftCheckTimerHandle = xTimerCreate(
 			(const char * const) "LiftCheckTimer",
-			STREAM_RATE,
+			HEART_BEAT_RATE,
 			TIMER_AUTORELOAD_ON,
 			NULL,
-			liftCheckSensorStreamData);
-#endif
+			liftCheckHeartBeatTimer);
 
     rc = xTaskCreate(liftCheckTask, (const char * const) "LiftCheckTask",
                     		1024*5, NULL, 1, &liftCheckTaskHandler);
