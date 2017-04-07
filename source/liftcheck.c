@@ -1396,6 +1396,12 @@ void rebootXDK(char* where){
 	//assert(0);
 }
 
+void rebootCat1(char* where){
+	DEBUG("%s() where=%s\r\n", __FUNCTION__, where);
+	//assert(0);
+	//cat1_reset();
+ 	//cat1_server_init(CAT1_SERVER_IP,CAT1_SERVER_PORT);
+}
 
 /*
 int counterGetThreshhold(int num)
@@ -2774,10 +2780,10 @@ int _tmain(int argc, _TCHAR* argv[])
 //*************************************************************************
 #define HEART_BEAT_RATE         60000/portTICK_RATE_MS
 
-
-
 void liftCheckHeartBeatTimer(xTimerHandle pvParameters)
 {
+	(void) pvParameters;
+	
 	DEBUG("%s() S2C_PING_COUNT=%d\r\n", __FUNCTION__, S2C_PING_COUNT);
 	if(S2C_PING_COUNT){
 		S2C_PING_COUNT = 0;
@@ -2787,6 +2793,19 @@ void liftCheckHeartBeatTimer(xTimerHandle pvParameters)
 	}
 }
 
+void liftCheckStartHeartBeatTimer(void)
+{
+	/* Start the timers */
+	xTimerStart(liftCheckTimerHandle, UINT32_MAX);
+	return;
+}
+
+void liftCheckStopHeartBeatTimer(void)
+{
+	/* Stop the timers */
+	xTimerStop(liftCheckTimerHandle, UINT32_MAX);
+	return;
+}
 
 void liftWebServerTask(void *pvParameters)
 {
@@ -2825,12 +2844,14 @@ void liftWebServerTask(void *pvParameters)
 					LIFT_SLEEP_MS(10);
 				}
 			}while(c<RETRY_MAX);
+			if(c>=RETRY_MAX){
+				rebootCat1(__FUNCTION__);
+			}
         }
 		LIFT_SLEEP_MS(10);
     }  	
 	return;
 }
-
 
 void liftCheckTask(void *pvParameters)
 {
@@ -2841,7 +2862,6 @@ void liftCheckTask(void *pvParameters)
 	
 	return;
 }
-
 
 void liftCheckClientInit(void)
 {
@@ -2892,8 +2912,7 @@ void liftCheckClientInit(void)
                     		1024*5, NULL, 1, &liftCheckTaskHandler);
 
     /* Error Occured Exit App */
-    if(rc < 0)
-    {
+    if(rc < 0){
 		DEBUG("liftCheckTask initialization FAILED\r\n");
 		return;
     }else{
@@ -2904,13 +2923,14 @@ void liftCheckClientInit(void)
                     		1024*5, NULL, 1, &liftWebServerTaskHandler);
 
     /* Error Occured Exit App */
-    if(rc < 0)
-    {
+    if(rc < 0){
 		DEBUG("liftWebServerTask initialization FAILED\r\n");
-		return;
 	}else{
-			DEBUG("liftWebServerTask initialization OK\r\n");
+		DEBUG("liftWebServerTask initialization OK\r\n");
 	}
+
+	liftCheckStartHeartBeatTimer();
+	
     return;
 }
 
