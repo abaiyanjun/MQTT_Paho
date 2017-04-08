@@ -377,12 +377,6 @@ int Cg = 0; //运行中开门过层层数计数器 1//not used now
 int Ci = 0; //开门走车过层层数计数器  1//not used now
 int Cm = 5; //停车时开关门次数计数器1
 
-//#define Sk 0 //额定梯速
-//#define Sn 1 //超速倍数定义
-//#define Sl 2 //超速过层层数
-//#define Lbase 3 //number of base floor
-//#define Lmax 4 //number of max floor
-//#define Lmin 5 //number of min floor
 //special varibles
 int Sk = 18;//额定梯速,m/s
 int Sn = 12; //超速倍数定义1.2*1.8=2.2
@@ -544,11 +538,6 @@ int gFlag_HeartBeatRespVideo = 0;
 
 int connectLost = 1;
 int connectVideoLost = 1;
-//int fd_io = NULL;
-//int fd_video = NULL;//connection for video, audio and player
-
-//int fd_status = NULL;//unused
-//int fd_Alarm = NULL;//unused
 
 #define SPRE "#10#"
 #define SEND "#13#"
@@ -561,11 +550,19 @@ int connectVideoLost = 1;
 #define C2S_LOGIN  "{\"type\":\"login\",\"eid\":\"%s\"}"
 #define S2C_LOGIN  "{\"type\":\"login\",\"res_id\":"
 
-#define S2C_PING_COUNT_MAX    100
+#define S2C_PING_COUNT_MAX    100  //服务器发送的ping, 如果超过次数没有收到, 就重启xdk
 unsigned int S2C_PING_COUNT=1;
 
-#define C2S_CPING_COUNT_MAX    100
+#define C2S_CPING_COUNT_MAX    100  //设备向服务器发送cping, 如果没有收到服务器应答超过次数, 则重启xdk 
 unsigned int C2S_CPING_COUNT=0;
+
+#define IMEI_BUF_LEN 100
+static char IMEI_BUF[IMEI_BUF_LEN];
+
+#define CAT1_SEND_RETRY_MAX 10	//如果cat1发送识别, 最大重复发送次数, 超过则重启xdk系统
+#define DEVICE_REGISTER_WAIT 30000 //如果注册识别, 等待30秒重新注册
+#define HEART_BEAT_RATE         60000/portTICK_RATE_MS //如果60秒没有收到服务器的心跳包, 则重启xdk
+#define WATCH_DOG_TIMEOUT    300000 //5分钟看门狗超时
 
 #define SECOND 1
 #define USECOND 0
@@ -1394,7 +1391,7 @@ void timerEndAudio(void)
 void rebootXDK(char* where){
 	DEBUG("%s() where=%s\r\n", __FUNCTION__, where);
 	//assert(0);
-	
+	//利用看门狗超时重启xdk
     WDG_init(WDG_FREQ, 100);
 	for(;;){};
 }
@@ -1403,31 +1400,10 @@ void rebootCat1(char* where){
 	DEBUG("%s() where=%s\r\n", __FUNCTION__, where);
 	rebootXDK(where);
 	//assert(0);
+	// TODO: cat1_reset 好像不能工作
 	//cat1_reset();
  	//cat1_server_init(CAT1_SERVER_IP,CAT1_SERVER_PORT);
 }
-
-/*
-int counterGetThreshhold(int num)
-{
-return counterThreshhold[num];
-}
-
-int counterSetThreshhold(int num, int value)
-{
-counterThreshhold[num] = value;
-}
-*/
-
-static int fd_ttysac0 = NULL;
-static int qstatus;
-
-#define SLIMIT	15
-#define SPEOPLE	16
-#define SDOOR	17
-#define SBASE	18
-#define SDOWN	19
-#define SUP		20
 
 static int inpositionCalled = 0;	//flag of being call for CLOSE_IN_POSITION
 static int outpositionCalled = 0;	//flag of being call for CLOSE_OUT_POSITION
@@ -1557,7 +1533,7 @@ int clearFaultSent(int faultNUM)
 void setFault(int faultNUM)
 {
 	faultTypeIndi[faultNUM] = 1;
-	DEBUG("***********          Fault: %d        ******\n", faultNUM);	
+	DEBUG("******       Fault: %d        ******\n", faultNUM);	
 #ifdef WIN_PLATFORM
 	//getchar();
 #endif
@@ -1627,28 +1603,6 @@ void checkElevatorFault(void)
 {
 	int counttime = 0;
 	/*assign sensor data to local varibles*/
-	//entering mutex
-#if 0	
-	int status_inPositionUp = pSensorsStatus.SStatus_inPositionUp;
-	int status_inPositionDown = pSensorsStatus.SStatus_inPositionDown;
-	int status_inPositionFlat = pSensorsStatus.SStatus_inPositionFlat;
-	int status_doorOpen = pSensorsStatus.SStatus_doorOpen;
-	//int status_havingPeople = pSensorsStatus.SStatus_havingPeople;
-	int status_inRepairing = pSensorsStatus.SStatus_inRepairing;
-	int status_alarmButtonPushed = pSensorsStatus.SStatus_alarmButtonPushed;  //pushed ==1
-	int status_safeCircuit = pSensorsStatus.SStatus_safeCircuit;
-	int status_runningContactor = pSensorsStatus.SStatus_runningContactor;
-	int status_generalContactor = pSensorsStatus.SStatus_generalContactor;
-#endif    
-	//leaving mutex
-
-	//getDirection();//in a thread or timer
-	//getFloorLevel();//in a thread or timer
-
-	//pElevatorStatus.EStatus_nowStatus = 0; //default normal
-	//pElevatorStatus.EStatus_powerStatus = 0;
-	//pElevatorStatus.EStatus_currentFloor = BaseFloor;
-
 	int status_powerStatus = pElevatorStatus.EStatus_powerStatus;
   	int status_direction = pElevatorStatus.EStatus_direction;
 	int status_doorStatus = pElevatorStatus.EStatus_doorStatus;
@@ -1660,9 +1614,6 @@ void checkElevatorFault(void)
 	int status_currentFloor = pElevatorStatus.EStatus_currentFloor;  //for A_HIT_CEILING
     int status_inPositionBase = pElevatorStatus.EStatus_inPositionBase;
 	int status_alarmButtonPushed = pSensorsStatus.SStatus_alarmButtonPushed;  //pushed ==1
-	//int status_floorLevel = pElevatorStatus.EStatus_currentFloor;
-
-	//Is these enough for checking if a fault happens?
 
 #if 0	
 	DEBUG("+++Checking list+++\n \
@@ -1732,16 +1683,6 @@ void checkElevatorFault(void)
 		,lastPosition \
 		,lastDoor \
 		,lastDirection);
-
-
-//now_status 0-3 当前状态[0 正常 1 故障 2 平层关人 3 非平层关人]
-//direction 0-2 方向[0 停留 1 上行 2 下行]
-//floor_status 0-1 平层状态[0平层 1 非平层]
-//speed real 梯速
-//door_status 0-3 门状态[0 关门 1 开门 2 关门中 3 开门中]
-//has_people 0-1 人状态[0 无人 1 有人]
-//power_status 0-2 电力[0 电源 1 电池 2 其他]
-//now_floor int 当前楼层
 
 	//if(status_inRepairing == 0)
 	//{
@@ -1972,14 +1913,13 @@ int httpGet_ServerTime(void)
 	return 0;
 }
 
-static char IMEI_BUF[100];
 int httpPost_DeviceRegister(char* rsp)
 {
 	int Count_MaxNoResponse = 10;
 	Cat1_return_t ret;
 	int len=0;
 
-	memset(IMEI_BUF, 0, 100);
+	memset(IMEI_BUF, 0, IMEI_BUF_LEN);
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
 	
 	ret= cat1_get_IMEI(IMEI_BUF);
@@ -2018,7 +1958,7 @@ int httpPost_DeviceRegister_rsp(char* rsp){
 		return 0;
 	}else{
 		// TODO: retry ? httpPost_DeviceRegister();
-		LIFT_SLEEP_MS(30000);
+		LIFT_SLEEP_MS(DEVICE_REGISTER_WAIT);
 		httpPost_DeviceRegister("");
 		return 1;
 	}
@@ -2085,6 +2025,7 @@ int httpPost_HeartBeat_S2C(char* rsp)
 int httpPost_KickOff(char* rsp)
 {
 	DEBUG("%s() ", __FUNCTION__);
+	LIFT_SLEEP_MS(10000);
 	rebootXDK(__FUNCTION__);
 	return 0;
 }
@@ -2092,16 +2033,6 @@ int httpPost_KickOff(char* rsp)
 
 int httpPost_FaultAlert(int int_alertType)
 {
-#if 0 //ndef WIN_PLATFORM
-	Lift_return_t ret=0;
-	int len=0;
-
-	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
-	sprintf(socketCmdBuf, SPRE"{\"type\":\"fault\",\"code\":%d}"SEND, int_alertType);
-	ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf));
-
-	DEBUG("httpPost_FaultAlert finished. ret=%d. buf=%s\n", ret, socketCmdBuf);
-#endif
 	return 0;
 }
 
@@ -2116,16 +2047,6 @@ int httpPost_FaultAlert(int int_alertType)
 */
 int httpPost_FaultRemove(int int_alertType)
 {
-#if 0 //ndef WIN_PLATFORM
-	Lift_return_t ret=0;
-	int len=0;
-
-	memset(socketCmdBuf,0,CMD_LEN);
-	sprintf(socketCmdBuf, SPRE"{\"type\":\"faultremove\",\"code\":%d}"SEND, int_alertType);
-	ret = cat1_send(socketCmdBuf, strlen(socketCmdBuf));
-
-	DEBUG("httpPost_FaultRemove finished. ret=%d. buf=%s\n", ret, socketCmdBuf);
-#endif
 	return 0;
 }
 
@@ -2355,9 +2276,6 @@ fault 故障数组 Eg：[1,2,3]
 		);
 #endif
 	
-#if 0
-	ret = cat1_send((uint16_t*)HttpPostStatusFaultBuffer, strlen(HttpPostStatusFaultBuffer));
-#endif 
 	LIFT_queueSendData_T msg;	
 	memset(&msg, 0, sizeof(msg));
 	msg.dataSize = strlen(HttpPostStatusFaultBuffer);
@@ -2372,9 +2290,6 @@ fault 故障数组 Eg：[1,2,3]
 	//DEBUG("******httpPost_StatusFault OK. buf=**%s**\n", HttpPostStatusFaultBuffer);
 	return 0;
 }
-
-
-
 
 void handleElevatorFault(void)
 {
@@ -2432,10 +2347,7 @@ void handleElevatorFault(void)
 void handleElevatorStatus(void)
 {
 	int count = 0;
-
-
 }
-
 
 void getSensorsStatus(){
     static int i=0;
@@ -2637,7 +2549,7 @@ int CheckLiftStatus(void){
 			continue;
 		}
 	
-		if(count%20==0){
+		if(count%60==0){
 			//send heart beat
 			DEBUG("send heart beat at %d\n", count);
 			httpPost_HeartBeat_C2S();
@@ -2647,11 +2559,8 @@ int CheckLiftStatus(void){
 		getSensorsStatus();
 
 		/*check faults when elevator not in a repairing*/
-
 		//sem_p(sem_d);
-		//checkElevatorFault_IO1();
 		checkElevatorFault();
-		//handleElevatorFault();
 		handleElevatorStatus();
 		httpPost_StatusFault(0);
 		//sem_v(sem_d);
@@ -2664,7 +2573,7 @@ int CheckLiftStatus(void){
 
 //=============================================================
 #ifdef WIN_PLATFORM
-
+//这里是windows模拟使用. 
 HANDLE event;
 HANDLE mutex;
 
@@ -2798,9 +2707,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 #else
-
+//下面是运行在xdk系统内
 //*************************************************************************
-#define HEART_BEAT_RATE         60000/portTICK_RATE_MS
 
 void liftCheckHeartBeatTimer(xTimerHandle pvParameters)
 {
@@ -2836,7 +2744,6 @@ void liftWebServerTask(void *pvParameters)
 	Cat1_return_t ret;
 	int len=0;
 	int c=0;
-#define RETRY_MAX 10	
 	
 	DEBUG("%s()\r\n", __FUNCTION__);
 
@@ -2865,8 +2772,8 @@ void liftWebServerTask(void *pvParameters)
 					DEBUG("WebMsg: send data FAIL! Try [%d] times.\n", c);
 					LIFT_SLEEP_MS(10);
 				}
-			}while(c<RETRY_MAX);
-			if(c>=RETRY_MAX){
+			}while(c<CAT1_SEND_RETRY_MAX);
+			if(c>=CAT1_SEND_RETRY_MAX){
 				rebootCat1(__FUNCTION__);
 			}
         }
@@ -2900,6 +2807,10 @@ void liftCheckClientInit(void)
 	if (ret != Cat1_STATUS_SUCCESS )
 	{
 		DEBUG("cat1 init failed\r\n");
+		//cat1 失败就延时后重启xdk
+		LIFT_SLEEP_MS(10000);
+		rebootXDK(__FUNCTION__);
+		
 		return;
 	}else{
 		DEBUG("Cat1 init Success!\r\n");
@@ -2909,6 +2820,11 @@ void liftCheckClientInit(void)
 	if (liftMsgQueueHandle == NULL)
     {
         DEBUG("liftMsgQueueHandle Send Queue could not be created");
+		
+		//失败就延时后重启xdk
+		LIFT_SLEEP_MS(10000);
+		rebootXDK(__FUNCTION__);
+		
 		return;
     }else{
         DEBUG("liftMsgQueueHandle Send Queue OK!");
@@ -2919,6 +2835,10 @@ void liftCheckClientInit(void)
 		DEBUG("LIFT USart_2 initialization SUCCESSFUL\r\n");
 	} else {
 		DEBUG("LIFT USart_2 initialization FAILED\r\n");
+		//失败就延时后重启xdk
+		LIFT_SLEEP_MS(10000);
+		rebootXDK(__FUNCTION__);
+		
 		return;
 	}
 
@@ -2936,6 +2856,11 @@ void liftCheckClientInit(void)
     /* Error Occured Exit App */
     if(rc < 0){
 		DEBUG("liftCheckTask initialization FAILED\r\n");
+		
+		//失败就延时后重启xdk
+		LIFT_SLEEP_MS(10000);
+		rebootXDK(__FUNCTION__);
+		
 		return;
     }else{
 		DEBUG("liftCheckTask initialization OK\r\n");
@@ -2947,14 +2872,20 @@ void liftCheckClientInit(void)
     /* Error Occured Exit App */
     if(rc < 0){
 		DEBUG("liftWebServerTask initialization FAILED\r\n");
+		
+		//失败就延时后重启xdk
+		LIFT_SLEEP_MS(10000);
+		rebootXDK(__FUNCTION__);
+		
+		return;
 	}else{
 		DEBUG("liftWebServerTask initialization OK\r\n");
 	}
 
 	liftCheckStartHeartBeatTimer();
 
-	
-    WDG_init(WDG_FREQ, 300000);
+	//启动看门狗
+    WDG_init(WDG_FREQ, WATCH_DOG_TIMEOUT);
     return;
 }
 
