@@ -1987,7 +1987,7 @@ int httpPost_DeviceRegister(void)
 	DEBUG("%s IMEI_BUF=**%s**, ret=%d\n", __FUNCTION__, IMEI_BUF, ret);
 	ret = Cat1_STATUS_FAILED;//for debug
 	if(ret == Cat1_STATUS_SUCCESS){
-		sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"%s\"}"SEND, IMEI_BUF);
+		sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"mx_%s\"}"SEND, IMEI_BUF);
 	}else{
 		sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"mx12345678\"}"SEND);
 	}
@@ -2022,7 +2022,7 @@ int httpPost_DeviceRegisterRsp(char* rsp){
 	}
 }
 
-int httpPost_HeartBeat(void)
+int httpPost_HeartBeat_C2S(void)
 {
 	Cat1_return_t ret;
 	int len=0;
@@ -2053,6 +2053,8 @@ int httpPost_HeartBeat_S2C(void)
 	int len=0;
 	
 	S2C_PING_COUNT++;
+	
+	DEBUG("%s() S2C_PING_COUNT=%d", __FUNCTION__, S2C_PING_COUNT);
 	
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
 	sprintf(socketCmdBuf, SPRE""C2S_PING""SEND);
@@ -2622,7 +2624,7 @@ int CheckLiftStatus(void){
 		if(count%20==0){
 			//send heart beat
 			DEBUG("send heart beat at %d\n", count);
-			httpPost_HeartBeat();
+			httpPost_HeartBeat_C2S();
 		}
 		
 		/*refresh status of all sensors*/
@@ -2793,7 +2795,7 @@ void liftCheckHeartBeatTimer(xTimerHandle pvParameters)
 		S2C_PING_COUNT = 0;
 	}else{
 		// TODO: reboot xdk 
-		rebootXDK(__FUNCTION__);
+		//rebootXDK(__FUNCTION__);
 	}
 }
 
