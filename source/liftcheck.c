@@ -1973,7 +1973,7 @@ int httpGet_ServerTime(void)
 }
 
 static char IMEI_BUF[100];
-int httpPost_DeviceRegister(void)
+int httpPost_DeviceRegister(char* rsp)
 {
 	int Count_MaxNoResponse = 10;
 	Cat1_return_t ret;
@@ -2004,7 +2004,7 @@ int httpPost_DeviceRegister(void)
 	return 0;
 }
 
-int httpPost_DeviceRegisterRsp(char* rsp){
+int httpPost_DeviceRegister_rsp(char* rsp){
 	DEBUG("%s rsp=>>%s<<", __FUNCTION__, rsp);
 	JSON_Value *val1 = json_parse_string(rsp);
 	JSON_Object *obj1 = NULL;
@@ -2018,6 +2018,8 @@ int httpPost_DeviceRegisterRsp(char* rsp){
 		return 0;
 	}else{
 		// TODO: retry ? httpPost_DeviceRegister();
+		LIFT_SLEEP_MS(30000);
+		httpPost_DeviceRegister("");
 		return 1;
 	}
 }
@@ -2047,7 +2049,16 @@ int httpPost_HeartBeat_C2S(void)
 	return 0;
 }
 
-int httpPost_HeartBeat_S2C(void)
+int httpPost_HeartBeat_C2S_rsp(char* rsp)
+{
+	if(C2S_CPING_COUNT>0){
+		C2S_CPING_COUNT--;
+	}
+	
+	DEBUG("%s() C2S_CPING_COUNT=%d", __FUNCTION__, C2S_CPING_COUNT);
+}
+
+int httpPost_HeartBeat_S2C(char* rsp)
 {
 	Cat1_return_t ret;
 	int len=0;
@@ -2068,6 +2079,13 @@ int httpPost_HeartBeat_S2C(void)
 		DEBUG("%s Send queue successful.", __FUNCTION__);
 	}
 #endif
+	return 0;
+}
+
+int httpPost_KickOff(char* rsp)
+{
+	DEBUG("%s() ", __FUNCTION__);
+	rebootXDK(__FUNCTION__);
 	return 0;
 }
 
@@ -2148,17 +2166,15 @@ int httpPost_ProcessServerMsg(unsigned int t)
 		DEBUG("WebMsg: fragment:>>%s<<\r\n", socketCmdRecvFragment);
 		
 		if(strstr(socketCmdRecvFragment, S2C_NEED_LOGIN)){
-			httpPost_DeviceRegister();
+			httpPost_DeviceRegister(socketCmdRecvFragment);
 		}else if(strstr(socketCmdRecvFragment, S2C_PING)){
-			httpPost_HeartBeat_S2C();
+			httpPost_HeartBeat_S2C(socketCmdRecvFragment);
 		}else if(strstr(socketCmdRecvFragment, S2C_LOGIN)){
-			httpPost_DeviceRegisterRsp(socketCmdRecvFragment);
+			httpPost_DeviceRegister_rsp(socketCmdRecvFragment);
 		}else if(strstr(socketCmdRecvFragment, S2C_KICk)){
-
+			httpPost_KickOff(socketCmdRecvFragment);
 		}else if(strstr(socketCmdRecvFragment, S2C_CPING)){
-			if(C2S_CPING_COUNT>0){
-				C2S_CPING_COUNT--;
-			}
+			httpPost_HeartBeat_C2S_rsp(socketCmdRecvFragment);
 		}
 
 		//next 
