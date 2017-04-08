@@ -1394,10 +1394,14 @@ void timerEndAudio(void)
 void rebootXDK(char* where){
 	DEBUG("%s() where=%s\r\n", __FUNCTION__, where);
 	//assert(0);
+	
+    WDG_init(WDG_FREQ, 100);
+	for(;;){};
 }
 
 void rebootCat1(char* where){
 	DEBUG("%s() where=%s\r\n", __FUNCTION__, where);
+	rebootXDK(where);
 	//assert(0);
 	//cat1_reset();
  	//cat1_server_init(CAT1_SERVER_IP,CAT1_SERVER_PORT);
@@ -2930,7 +2934,9 @@ void liftCheckClientInit(void)
 	}
 
 	liftCheckStartHeartBeatTimer();
+
 	
+    WDG_init(WDG_FREQ, 300000);
     return;
 }
 
