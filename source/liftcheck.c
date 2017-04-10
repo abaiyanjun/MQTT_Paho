@@ -558,6 +558,8 @@ unsigned int C2S_CPING_COUNT=0;
 
 #define IMEI_BUF_LEN 100
 static char IMEI_BUF[IMEI_BUF_LEN];
+//#define DEVICE_ID_DEFAULT    "mx12345678"  //测试临时使用的设备id
+
 
 #define CAT1_SEND_RETRY_MAX 10	//如果cat1发送识别, 最大重复发送次数, 超过则重启xdk系统
 #define DEVICE_REGISTER_WAIT 30000 //如果注册识别, 等待30秒重新注册
@@ -1925,12 +1927,17 @@ int httpPost_DeviceRegister(char* rsp)
 	ret= cat1_get_IMEI(IMEI_BUF);
 	
 	DEBUG("%s IMEI_BUF=**%s**, ret=%d\n", __FUNCTION__, IMEI_BUF, ret);
-	ret = Cat1_STATUS_FAILED;//for debug
 	if(ret == Cat1_STATUS_SUCCESS){
 		sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"mx_%s\"}"SEND, IMEI_BUF);
+		DEBUG("%s get IMEI OK. IMEI=%s", __FUNCTION__, IMEI_BUF);
 	}else{
-		sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"mx12345678\"}"SEND);
+		DEBUG("%s get IMEI fail.", __FUNCTION__);
 	}
+
+#ifdef DEVICE_ID_DEFAULT 
+	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
+	sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"%s\"}"SEND, DEVICE_ID_DEFAULT);
+#endif
 	
 	LIFT_queueSendData_T msg;	
 	memset(&msg, 0, sizeof(msg));
