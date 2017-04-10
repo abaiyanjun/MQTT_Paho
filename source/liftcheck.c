@@ -373,6 +373,14 @@ typedef unsigned char UCHAR8;
 #define Tm 12 //停车时开门时间计时器80
 #define Tn 13 //（保留）//人感定时器,不及时检测, 等待 10s
 
+int wsTimer = 0;
+int timers[14] = { 0 };
+//int timerThreshhold[14] = { 30, 60, 30, 300, 60, 30, 30, 30, 30, 30, 20, 30, 30, 30 }; //default values, change Td to 300, JC, 20160430
+///////////////////////////  Ta, Tb, Tc, Td,  Te, Tf, Tg, Th, Ti, Tj, Tk, Tl, Tm, Tn
+int timerThreshhold[14] =  { 20, 20, 20, 100, 20, 45, 50, 20, 50, 20, 20, 20, 60, 10 }; //default values, change Td to 300, JC, 20160430
+int time_StreamCloud = 300;
+
+
 int Cg = 0; //运行中开门过层层数计数器 1//not used now
 int Ci = 0; //开门走车过层层数计数器  1//not used now
 int Cm = 5; //停车时开关门次数计数器1
@@ -400,6 +408,7 @@ struct T_ElevatorStatus{
 	int EStatus_backup1;
 	int EStatus_backup2;
 	int EStatus_inPositionBase;//01
+	int EStatus_inRepairing;
 };
 
 struct T_SensorsStatus{
@@ -487,12 +496,6 @@ int timerThreshholdVideo = 360; //6 minutes
 
 int lastNormalSpeed = 0;
 
-int wsTimer = 0;
-int timers[14] = { 0 };
-//int timerThreshhold[14] = { 30, 60, 30, 300, 60, 30, 30, 30, 30, 30, 20, 30, 30, 30 }; //default values, change Td to 300, JC, 20160430
-///////////////////////////  Ta, Tb, Tc, Td,  Te, Tf,  Tg, Th, Ti, Tj, Tk, Tl, Tm, Tn
-int timerThreshhold[14] =  { 20, 20, 20, 100, 20, 30, 20, 20, 20, 20, 20, 20, 60, 10 }; //default values, change Td to 300, JC, 20160430
-int time_StreamCloud = 300;
 int parent_id_StreamCloud_int = 0;
 const char *parent_id_StreamCloud_string;
 int isParentIdInt = 0;
@@ -1510,6 +1513,7 @@ void elevatorStatus_init()
 	pElevatorStatus.EStatus_backup1 = NULL;
 	pElevatorStatus.EStatus_backup2 = NULL;
     pElevatorStatus.EStatus_inPositionBase = 0;
+	pElevatorStatus.EStatus_inRepairing = 0;
 }
 
 
@@ -1616,7 +1620,8 @@ void checkElevatorFault(void)
 	int status_currentFloor = pElevatorStatus.EStatus_currentFloor;  //for A_HIT_CEILING
     int status_inPositionBase = pElevatorStatus.EStatus_inPositionBase;
 	int status_alarmButtonPushed = pSensorsStatus.SStatus_alarmButtonPushed;  //pushed ==1
-
+	int status_inRepairing = pElevatorStatus.EStatus_inRepairing;
+	
 #if 0	
 	DEBUG("+++Checking list+++\n \
 		powerStatus: %d,\n \
@@ -1662,6 +1667,7 @@ void checkElevatorFault(void)
 	char mstatus_inPosition[][100] = { "flat", "not flat" };
 	char mstatus_inPositionBase[][100] = { "not base", "base" };
 	char mstatus_havingPeople[][100] = { "nobody", "has people" };
+	char mstatus_inRepairing[][100] = { "not in reparing", "in reparing" };
 
 #endif
 	DEBUG("+++Checking list+++\n \
@@ -1670,13 +1676,15 @@ void checkElevatorFault(void)
 		inPosition:%d/%s,\n \
 		inPositionBase:%d/%s,\n \
 		havingPeople:%d/%s,\n \
-		currentFloor:%d,\n" \
-		, status_direction, mstatus_direction[status_direction] \
-		, status_doorStatus, mstatus_doorStatus[status_doorStatus] \
-		, status_inPosition, mstatus_inPosition[status_inPosition] \
-		, status_inPositionBase, mstatus_inPositionBase[status_inPositionBase] \
-		, status_havingPeople, mstatus_havingPeople[status_havingPeople] \
-		, status_currentFloor);
+		currentFloor:%d,\n \
+		inRepairing:%d/%s,\n" \
+		, status_direction, mstatus_direction[status_direction]
+		, status_doorStatus, mstatus_doorStatus[status_doorStatus]
+		, status_inPosition, mstatus_inPosition[status_inPosition]
+		, status_inPositionBase, mstatus_inPositionBase[status_inPositionBase]
+		, status_havingPeople, mstatus_havingPeople[status_havingPeople]
+		, status_currentFloor
+		, status_inRepairing, mstatus_inRepairing[status_havingPeople]);
 	
 	DEBUG("+++Checking list+++\n \
 		lastPosition: %d,\n \
@@ -1686,54 +1694,49 @@ void checkElevatorFault(void)
 		,lastDoor \
 		,lastDirection);
 
-	//if(status_inRepairing == 0)
-	//{
-		if(currentFloorRefreshed == 1)
+	if(status_inRepairing == 0)
+	{
+		/*here to check if A_HIT_GROUND or A_HIT_CEILING occurs*/
+		if((status_currentFloor == Lmin)&&(status_direction == 2)&&(status_inPosition == 1)) //if(status_direction == 2) has chance to miss?
+		{//all 3 conditions will stay if this occurs
+			flag_hitgroud = 1;
+			flag_hitceiling = 0;
+			INFO("IN: current floor, derection and inpostion are: %d, %d, %d\n",status_currentFloor,status_direction,status_inPosition);
+			if(timerRead(Ta) == 0) timerStart(Ta);
+			//INFO("check time - ground: %d\n",timerCheck(Ta));
+			if(timerCheck(Ta)>= timerGetThreshhold(Ta))
+			{
+				DEBUG("Fault: A_HIT_GROUND!\n");
+				setFault(A_HIT_GROUND);
+			}
+		}
+		else
 		{
-			/*here to check if A_HIT_GROUND or A_HIT_CEILING occurs*/
-			if((status_currentFloor == Lmin)&&(status_direction == 2)&&(status_inPosition == 1)) //if(status_direction == 2) has chance to miss?
-			{//all 3 conditions will stay if this occurs
-				flag_hitgroud = 1;
-				flag_hitceiling = 0;
-				//INFO("IN: current floor, derection and inpostion are: %d, %d, %d\n",status_currentFloor,status_direction,status_inPosition);
-				if(timerRead(Ta) == 0) timerStart(Ta);
-				//INFO("check time - ground: %d\n",timerCheck(Ta));
-				if(timerCheck(Ta)>= timerGetThreshhold(Ta))
-				{
-					DEBUG("set fault: hit ground!\n");
-					setFault(A_HIT_GROUND);
-				}
-				//DEBUG("Fault: A_HIT_GROUND!\n");
-			}
-			else
+			if(flag_hitceiling == 0)
 			{
-				if(flag_hitceiling == 0)
-				{
-					timerEnd(Ta);
-					flag_hitgroud = 0;
-				}
-			}
-
-			if((status_currentFloor == Lmax)&&(status_direction==1)&&(status_inPosition == 1))
-			{
-				flag_hitceiling = 1;
+				timerEnd(Ta);
 				flag_hitgroud = 0;
-				if(timerRead(Ta) == 0) timerStart(Ta);
-				//INFO("check time - ceiling: %d\n",timerCheck(Ta));
-				if(timerCheck(Ta)>= timerGetThreshhold(Ta))
-				{
-					INFO("set fault: hit ceiling!\n");
-					setFault(A_HIT_CEILING);
-				}
-				//DEBUG("Fault: A_HIT_CEILING!\n");
 			}
-			else
+		}
+
+		if((status_currentFloor == Lmax)&&(status_direction==1)&&(status_inPosition == 1))
+		{
+			flag_hitceiling = 1;
+			flag_hitgroud = 0;
+			if(timerRead(Ta) == 0) timerStart(Ta);
+			INFO("check time - ceiling: %d\n",timerCheck(Ta));
+			if(timerCheck(Ta)>= timerGetThreshhold(Ta))
 			{
-				if(flag_hitgroud == 0)
-				{
-					timerEnd(Ta);
-					flag_hitceiling = 0;
-				}
+				DEBUG("Fault: A_HIT_CEILING!\n");
+				setFault(A_HIT_CEILING);
+			}
+		}
+		else
+		{
+			if(flag_hitgroud == 0)
+			{
+				timerEnd(Ta);
+				flag_hitceiling = 0;
 			}
 		}
 
@@ -1790,7 +1793,7 @@ void checkElevatorFault(void)
 			}
 			/**********************************************/
 			/*here to check if A_CLOSE_OUT_POSITION occurs*/
-			if(status_inPosition == 1)
+			if(status_inPosition == 1 && status_doorStatus == 0)
 			{
 				if(timerRead(Te) == 0) timerStart(Te);
 				if((timerRead(Te)>0)&&(timerCheck(Te)>= timerGetThreshhold(Te)))
@@ -1844,17 +1847,14 @@ void checkElevatorFault(void)
 		if(status_inPosition == 0)// && status_doorStatus == 1)
 		{
 			removeFault(A_HIT_GROUND);
-			//xRemoveFault(X_HIT_GROUND);
 
 			removeFault(A_HIT_CEILING);
-			//xRemoveFault(X_HIT_CEILING);
 
 			removeFault(A_STOP_OUT_AREA);
-			//xRemoveFault(X_STOP_OUT_AREA);
 			
 			removeFault(A_CLOSE_OUT_POSITION);
+			timerEnd(Ta);
 			timerEnd(Te);
-			
 			timerEnd(Tc);
 			timerEnd(Td);
 			inpositionCalled = 0;
@@ -1872,33 +1872,28 @@ void checkElevatorFault(void)
 			removeFault(A_CLOSE_FAULT);
 		}
 
-		if(status_havingPeople == 0) // && status_doorStatus == 1
+		if(status_inPosition == 0 && status_doorStatus == 1)
 		{
 			removeFault(A_CLOSE_IN_POSITION);
-			removeFault(A_CLOSE_OUT_POSITION);
-			//xRemoveFault(X_CLOSE_PEOPLE);
 
-			timerEnd(Te);
 			timerEnd(Tb);
 			timerEnd(Td);
 			outpositionCalled = 0;
-		}else{
-			if(status_doorStatus == 1){
-				removeFault(A_CLOSE_IN_POSITION);
-				removeFault(A_CLOSE_OUT_POSITION);
-				//xRemoveFault(X_CLOSE_PEOPLE);
-				
-				timerEnd(Te);
-				timerEnd(Tb);
-			}
+		}
+		if(status_inPosition == 1 && status_doorStatus == 1)
+		{
+			removeFault(A_CLOSE_OUT_POSITION);
+
+			timerEnd(Te);
+			timerEnd(Td);
+			outpositionCalled = 0;
 		}
 
 		lastPosition = status_inPosition;
 		lastDoor = status_doorStatus;
 		lastDirection = status_direction;
 
-    //}//status_inRepairing
-
+    }//status_inRepairing
 
 }
 
@@ -2174,8 +2169,8 @@ fault 故障数组 Eg：[1,2,3]
 	int status_currentFloor = pElevatorStatus.EStatus_currentFloor;
 	int status_doorStatus = pElevatorStatus.EStatus_doorStatus;
 	int status_havingPeople = pElevatorStatus.EStatus_havingPeople;
-	int status_reparing = 0;
-    int status_inmaintenance = 0;
+	int status_inReparing = pElevatorStatus.EStatus_inRepairing;
+    int status_inMaintenance = 0;
 
 	memset(FaultArray, 0, 100);
 
@@ -2264,8 +2259,8 @@ fault 故障数组 Eg：[1,2,3]
 		status_currentFloor,
 		status_doorStatus,
 		status_havingPeople,
-		status_reparing,
-		status_inmaintenance,
+		status_inReparing,
+		status_inMaintenance,
 		FaultArray
 	);
 #else
@@ -2277,8 +2272,8 @@ fault 故障数组 Eg：[1,2,3]
 			status_currentFloor,
 			status_doorStatus,
 			status_havingPeople,
-			status_reparing,
-			status_inmaintenance,
+			status_inReparing,
+			status_inMaintenance,
 			FaultArray
 		);
 #endif
@@ -2446,7 +2441,7 @@ void getSensorsStatus(){
 				break;
 			case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
 			{
-#if 1
+#if 0
 				pSensorsStatus.SStatus_havingPeople = *(p+j);
 #else
 				if(timerRead(Tn) == 0){
