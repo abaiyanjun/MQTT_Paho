@@ -255,15 +255,46 @@ char* thisVersion = "161107"; //"1.0.34 bulid-160518";
 #define S_generalContactor_ON	1
 #define S_generalContactor_OFF	0
 
-//type elevator_status 标识电梯状态上传。
-//now_status 0-3 当前状态[0 正常 1 故障 2 平层关人 3 非平层关人]
-//direction 0-2 方向[0 停留 1 上行 2 下行]
-//floor_status 0-1 平层状态[0平层 1 非平层]
-//speed real 梯速
-//door_status 0-3 门状态[0 关门 1 开门 2 关门中 3 开门中]
-//has_people 0-1 人状态[0 无人 1 有人]
+#define S_baseStation_ON  1
+#define S_baseStation_OFF  0
+
+#define S_limitSwitch_ON  1
+#define S_limitSwitch_OFF  0
+
+//now_status 0-3 当前状态[0 正常 1 故障]
+#define E_nowStatus_NORMAL 0
+#define E_nowStatus_FAULT 1
+
 //power_status 0-2 电力[0 电源 1 电池 2 其他]
-//now_floor int 当前楼层
+#define E_powerStatus_POWER 0
+#define E_powerStatus_BATTERY 1
+#define E_powerStatus_OTHER 2
+
+//direction 0-2 方向[0 停留 1 上行 2 下行]
+#define E_direction_STOP 0
+#define E_direction_UP 1
+#define E_direction_DOWN 2
+
+//floor_status 0-1 平层状态[0平层 1 非平层]
+#define E_inPosition_FLAT 0
+#define E_inPosition_NOFLAT 1
+
+//door_status 0-3 门状态[0 关门 1 开门 2 关门中 3 开门中]
+#define E_doorStatus_CLOSE 0
+#define E_doorStatus_OPEN 1
+
+//has_people 0-1 人状态[0 无人 1 有人]
+#define E_havingPeople_NOBODY 0
+#define E_havingPeople_YES 1
+
+//inPositionBase[0 非基站  1 基站]
+#define E_inPositionBase_NO 0
+#define E_inPositionBase_YES 1
+
+//inRepairing[0 没有维修  1 维修状态]
+#define E_inRepairing_NO 0
+#define E_inRepairing_YES 1
+
 
 /*App - Sensors*/
 #define S_IN_POSITION_UP  	1  //up or down, need to confirm
@@ -314,7 +345,7 @@ typedef unsigned char UCHAR8;
 #define PORT_IO 13000
 #define PORT_VIDEO 15000
 
-#define SOCKETBUFSIZE 1024
+#define UARTBUFSIZE 1024
 
 #define BUFSIZE 1024
 #define FaultTotalNumbers 27
@@ -539,6 +570,14 @@ int gFlag_HeartBeatResp = 0;
 int gFlag_HeartBeatRespVideo = 0;
 //int connectLost = 0;
 
+static int inpositionCalled = 0;	//flag of being call for CLOSE_IN_POSITION
+static int outpositionCalled = 0;	//flag of being call for CLOSE_OUT_POSITION
+static int inpositionBroadcasted = 0;
+static int outpositionBroadcasted = 0;
+static int flag_hitceiling = 0;
+static int flag_hitgroud = 0;
+
+
 int connectLost = 1;
 int connectVideoLost = 1;
 
@@ -565,7 +604,7 @@ static char IMEI_BUF[IMEI_BUF_LEN];
 
 
 #define CAT1_SEND_RETRY_MAX 10	//如果cat1发送识别, 最大重复发送次数, 超过则重启xdk系统
-#define DEVICE_REGISTER_WAIT 30000 //如果注册识别, 等待30秒重新注册
+#define DEVICE_REGISTER_WAIT 10000 //如果注册识别, 等待30秒重新注册
 #define HEART_BEAT_RATE         60000/portTICK_RATE_MS //如果60秒没有收到服务器的心跳包, 则重启xdk
 #define WATCH_DOG_TIMEOUT    300000 //5分钟看门狗超时
 
@@ -1259,17 +1298,15 @@ unsigned char T05[][TITEMLEN] ={
 
 
 
-char UartBuf[SOCKETBUFSIZE];
-
+char UartBuf[UARTBUFSIZE];
 char FaultArray[100];
 char HttpPostStatusFaultBuffer[SEND_LEN];
 
 
-void getSensorsStatus();
-
-
-
 time_t t_timers;
+int timerVideo = 0;
+int timerAudio = 0;
+
 
 /*
 * @brief Allows to encode the provided content, leaving the output on
@@ -1331,7 +1368,6 @@ int timerSetThreshhold(int num, int value)
 
 /***************Video*******************/
 
-int timerVideo = 0;
 
 /*
 * @brief Allows to encode the provided content, leaving the output on
@@ -1363,7 +1399,6 @@ void timerEndVideo(void)
 
 /***************Audio, not used yet*******************/
 
-int timerAudio = 0;
 
 /*
 * @brief Allows to encode the provided content, leaving the output on
@@ -1410,16 +1445,6 @@ void rebootCat1(char* where){
  	//cat1_server_init(CAT1_SERVER_IP,CAT1_SERVER_PORT);
 }
 
-static int inpositionCalled = 0;	//flag of being call for CLOSE_IN_POSITION
-static int outpositionCalled = 0;	//flag of being call for CLOSE_OUT_POSITION
-static int inpositionBroadcasted = 0;
-static int outpositionBroadcasted = 0;
-//static int lastDoorStatus = 0;
-//static int lastInPosition = 0;
-static int flag_hitceiling = 0;
-static int flag_hitgroud = 0;
-
-
 int set_SStatus_emergencyLED(int sig)//maybe changed from other sources
 {
 	//DEBUG("set_SStatus_emergencyLED %d\n", sig);
@@ -1441,43 +1466,38 @@ int get_EStatus_nowStatus()//not used
 
 int get_EStatus_powerStatus()
 {
-	return 0;//GPIORead(S_POWER_STATUS); 0 is normal 
+	return E_powerStatus_POWER;
 }
 
 int get_EStatus_doorStatus()
 {
 	if (pSensorsStatus.SStatus_doorOpen == S_doorOpen_ON)
-		return 1;
+		return E_doorStatus_OPEN;
 	else
-		return 0;
+		return E_doorStatus_CLOSE;
 }
 
-int get_EStatus_inPosition()//maybe should add speed = 0 or direction = 0,NO
+int get_EStatus_inPosition()
 {
 	if (pSensorsStatus.SStatus_inPositionUp == S_inPositionUp_ON && pSensorsStatus.SStatus_inPositionDown == S_inPositionDown_ON)
 	{
-		pElevatorStatus.EStatus_direction = 0;//from get_EStatus_direction()
-		return 0; //flat floor
+		pElevatorStatus.EStatus_direction = E_direction_STOP;
+		return E_inPosition_FLAT; //flat floor
 	}
 	else
-		return 1; //not flat floor
+		return E_inPosition_NOFLAT; //not flat floor
 }
 
-
-//function: get_EStatus_havingPeople
-//para: void
-//return: 0:no people, 1:having people
-//decripiton: when started, the sensor is off, timerCheck(Tk) is time - 0 > threshhold, it will return 0.
 int get_EStatus_havingPeople()
 {
 	//INFO("SStatus_havingPeople: %d\n",pSensorsStatus.SStatus_havingPeople);
 	if (pSensorsStatus.SStatus_havingPeople == S_havingPeople_ON)
 	{
-		return 1;
+		return E_havingPeople_YES;
 	}
 	else
 	{
-		return 0;
+		return E_havingPeople_NOBODY;
 	}
 }
 
@@ -1495,26 +1515,29 @@ void sensorsStatus_init(void)//It's best to read first
 	pSensorsStatus.SStatus_generalContactor = S_generalContactor_OFF; //not used now
 	pSensorsStatus.SStatus_backup1 = NULL;
 	pSensorsStatus.SStatus_backup2 = NULL;
-    pSensorsStatus.SStatus_baseStation = 0;
-    pSensorsStatus.SStatus_limitSwitch = 0;
+    pSensorsStatus.SStatus_baseStation = S_baseStation_OFF;
+    pSensorsStatus.SStatus_limitSwitch = S_limitSwitch_OFF;
 }
 
 
 void elevatorStatus_init()
 {
-	pElevatorStatus.EStatus_nowStatus = 0; //default normal
-	pElevatorStatus.EStatus_powerStatus = 0;
-	pElevatorStatus.EStatus_direction = 0;
-	pElevatorStatus.EStatus_doorStatus = 0;
-	pElevatorStatus.EStatus_inPosition = 0;
-	pElevatorStatus.EStatus_speed = 0;
-	pElevatorStatus.EStatus_havingPeople = 0;
+	pElevatorStatus.EStatus_nowStatus = E_nowStatus_NORMAL;
+	pElevatorStatus.EStatus_powerStatus = E_powerStatus_POWER;
+	pElevatorStatus.EStatus_direction = E_direction_STOP;
+	pElevatorStatus.EStatus_doorStatus = E_doorStatus_CLOSE;
+	pElevatorStatus.EStatus_inPosition = E_inPosition_FLAT;
+	pElevatorStatus.EStatus_speed = 0.0;
+	pElevatorStatus.EStatus_havingPeople = E_havingPeople_NOBODY;
 	pElevatorStatus.EStatus_currentFloor = Lbase;
 	pElevatorStatus.EStatus_backup1 = NULL;
 	pElevatorStatus.EStatus_backup2 = NULL;
-    pElevatorStatus.EStatus_inPositionBase = 0;
-	pElevatorStatus.EStatus_inRepairing = 0;
+    pElevatorStatus.EStatus_inPositionBase = E_inPositionBase_YES;
+	pElevatorStatus.EStatus_inRepairing = E_inRepairing_NO;
 }
+
+
+
 
 
 /*****************************/
@@ -1584,27 +1607,6 @@ void makeACall(void){
 
 }
 
-
-/*
- * @brief Allows to encode the provided content, leaving the output on
- * the buffer allocated by the caller.
- *
- * (门区外停梯)、[超速]、运行中开门、(冲顶、蹲底)、开门走车、(停电、平层关人、非平层关人)
- *
- * @param(void)
- *
- * @return(void)
- */
-
-
-/*
- * @brief Allows to encode the provided content, leaving the output on
- * the buffer allocated by the caller.
- *
- * @param(void)
- *
- * @return(void)
- */
 void checkElevatorFault(void)
 {
 	int counttime = 0;
@@ -1614,47 +1616,12 @@ void checkElevatorFault(void)
 	int status_doorStatus = pElevatorStatus.EStatus_doorStatus;
 	int status_inPosition = pElevatorStatus.EStatus_inPosition;
 	float status_speed = pElevatorStatus.EStatus_speed;
-
 	int status_havingPeople = pElevatorStatus.EStatus_havingPeople;
-
-	int status_currentFloor = pElevatorStatus.EStatus_currentFloor;  //for A_HIT_CEILING
+	int status_currentFloor = pElevatorStatus.EStatus_currentFloor;
     int status_inPositionBase = pElevatorStatus.EStatus_inPositionBase;
 	int status_alarmButtonPushed = pSensorsStatus.SStatus_alarmButtonPushed;  //pushed ==1
 	int status_inRepairing = pElevatorStatus.EStatus_inRepairing;
 	
-#if 0	
-	DEBUG("+++Checking list+++\n \
-		powerStatus: %d,\n \
-		direction:%d,\n \
-		speed:%.2f,\n \
-		doorStatus:%d,\n \
-		inPosition:%d,\n \
-		inPositionBase:%d,\n \
-		havingPeople:%d,\n \
-		currentFloor:%d,\n \
-		inRepairing:%d,\n \
-		alarmButtonPushed:%d,\n \
-		safeCircuit:%d,\n" \
-		,status_powerStatus \
-		,status_direction \
-		,status_speed \
-		,status_doorStatus \
-		,status_inPosition \
-		,status_inPositionFlat \
-		,status_havingPeople \
-		,status_currentFloor \
-		,status_inRepairing \
-		,status_alarmButtonPushed \
-		,status_safeCircuit);
-
-	DEBUG("+++Checking list+++\n \
-		lastPosition: %d,\n \
-		lastDoor:%d,\n \
-		BaseFloor:%d\n" \
-		,lastPosition \
-		,lastDoor \
-		,BaseFloor);
-#endif
 #if 0
 	char mstatus_direction[][100] = { "停", "上行", "下行" };
 	char mstatus_doorStatus[][100] = { "关", "开" };
@@ -1694,10 +1661,10 @@ void checkElevatorFault(void)
 		,lastDoor \
 		,lastDirection);
 
-	if(status_inRepairing == 0)
+	if(status_inRepairing == E_inRepairing_NO)
 	{
 		/*here to check if A_HIT_GROUND or A_HIT_CEILING occurs*/
-		if((status_currentFloor == Lmin)&&(status_direction == 2)&&(status_inPosition == 1)) //if(status_direction == 2) has chance to miss?
+		if((status_currentFloor == Lmin)&&(status_direction == E_direction_DOWN)&&(status_inPosition == E_inPosition_NOFLAT)) 
 		{//all 3 conditions will stay if this occurs
 			flag_hitgroud = 1;
 			flag_hitceiling = 0;
@@ -1719,7 +1686,7 @@ void checkElevatorFault(void)
 			}
 		}
 
-		if((status_currentFloor == Lmax)&&(status_direction==1)&&(status_inPosition == 1))
+		if((status_currentFloor == Lmax)&&(status_direction==E_direction_UP)&&(status_inPosition == E_inPosition_NOFLAT))
 		{
 			flag_hitceiling = 1;
 			flag_hitgroud = 0;
@@ -1741,7 +1708,7 @@ void checkElevatorFault(void)
 		}
 
 		/*here to check if A_STOP_OUT_AREA or  A_CLOSE_IN_POSITION, or A_CLOSE_OUT_POSITIONoccurs*/	
-		if(status_havingPeople == 0)//no people in the cube
+		if(status_havingPeople == E_havingPeople_NOBODY)//no people in the cube
 		{
 			//refresh, seperate before and after fault occurs, if faults occur, should not reset here.
 			timerEnd(Tb);
@@ -1751,7 +1718,7 @@ void checkElevatorFault(void)
 			//inpositionCalled = 0;
 			removeFault(A_CLOSE_IN_POSITION);
 			removeFault(A_CLOSE_OUT_POSITION);
-			if(status_inPosition == 1)
+			if(status_inPosition == E_inPosition_NOFLAT)
 			{
 				if(timerRead(Tf) == 0) timerStart(Tf);
 				if(timerCheck(Tf)>= timerGetThreshhold(Tf))
@@ -1777,7 +1744,7 @@ void checkElevatorFault(void)
 
 			/*********************************************/
 			/*here to check if A_CLOSE_IN_POSITION occurs*/
-			if(status_inPosition == 0 && status_doorStatus == 0)
+			if(status_inPosition == E_inPosition_FLAT && status_doorStatus == E_doorStatus_CLOSE)
 			{
 				if(timerRead(Tb) == 0) timerStart(Tb);
 				if((timerRead(Tb)>0)&&(timerCheck(Tb)>= timerGetThreshhold(Tb)))
@@ -1793,7 +1760,7 @@ void checkElevatorFault(void)
 			}
 			/**********************************************/
 			/*here to check if A_CLOSE_OUT_POSITION occurs*/
-			if(status_inPosition == 1 && status_doorStatus == 0)
+			if(status_inPosition == E_inPosition_NOFLAT && status_doorStatus == E_doorStatus_CLOSE)
 			{
 				if(timerRead(Te) == 0) timerStart(Te);
 				if((timerRead(Te)>0)&&(timerCheck(Te)>= timerGetThreshhold(Te)))
@@ -1808,43 +1775,28 @@ void checkElevatorFault(void)
 				timerEnd(Te);
 			}
 		}
-#if 0
-		//A_OPEN_WHILE_RUNNIN 	4//运行中开门；**
-		if(status_doorStatus == 1 && status_inPosition == 1 && status_direction!=0)
-		{
-			DEBUG("Fault: A_OPEN_WHILE_RUNNIN!\n");
-			setFault(A_OPEN_WHILE_RUNNIN);
-		}
 
-		//A_OPEN_WITHOUT_STOPPIN 	5//开门走车；**
-		if(status_doorStatus == 1 && status_inPosition != 0)
-		{
-			DEBUG("Fault: A_OPEN_WITHOUT_STOPPIN!\n");
-			setFault(A_OPEN_WITHOUT_STOPPIN);
-		}
-#endif
-
-		if((lastDoor == 0 && lastPosition == 1)&&(status_doorStatus == 1 && status_inPosition == 1))
+		if((lastDoor == 0 && lastPosition == 1)&&(status_doorStatus == E_doorStatus_OPEN && status_inPosition == E_inPosition_NOFLAT))
 		{
 			DEBUG("Fault: A_OPEN_WHILE_RUNNIN!\n");
 			setFault(A_OPEN_WHILE_RUNNIN);
 		}
 
 		//0:door closed; 1:door open, 0:in position, 1: not in position
-		if((lastDoor == 1 && lastPosition == 0)&&(status_doorStatus == 1 && status_inPosition != 0))
+		if((lastDoor == 1 && lastPosition == 0)&&(status_doorStatus == E_doorStatus_OPEN && status_inPosition == E_inPosition_NOFLAT))
 		{
 			DEBUG("Fault: A_OPEN_WITHOUT_STOPPIN!\n");
 			setFault(A_OPEN_WITHOUT_STOPPIN);
 		}
 
 		//added by JC, 20161113
-		if((lastDoor == 0 && lastPosition == 0)&&(status_doorStatus == 0 && status_inPosition != 0))
+		if((lastDoor == 0 && lastPosition == 0)&&(status_doorStatus == E_doorStatus_CLOSE && status_inPosition == E_inPosition_NOFLAT))
 		{
 			removeFault(A_OPEN_WITHOUT_STOPPIN);
 		}
 
 		/*check if fualts should be removed*/
-		if(status_inPosition == 0)// && status_doorStatus == 1)
+		if(status_inPosition == E_inPosition_FLAT)
 		{
 			removeFault(A_HIT_GROUND);
 
@@ -1867,12 +1819,12 @@ void checkElevatorFault(void)
 			timerEnd(Tb);
 		}
 			
-		if(status_doorStatus == 0 && status_inPosition == 1) //close and move
+		if(status_doorStatus == E_doorStatus_CLOSE && status_inPosition == E_inPosition_NOFLAT) //close and move
 		{
 			removeFault(A_CLOSE_FAULT);
 		}
 
-		if(status_inPosition == 0 && status_doorStatus == 1)
+		if(status_inPosition == E_inPosition_FLAT && status_doorStatus == E_doorStatus_OPEN)
 		{
 			removeFault(A_CLOSE_IN_POSITION);
 
@@ -1880,7 +1832,7 @@ void checkElevatorFault(void)
 			timerEnd(Td);
 			outpositionCalled = 0;
 		}
-		if(status_inPosition == 1 && status_doorStatus == 1)
+		if(status_inPosition == E_inPosition_NOFLAT && status_doorStatus == E_doorStatus_OPEN)
 		{
 			removeFault(A_CLOSE_OUT_POSITION);
 
@@ -1912,10 +1864,15 @@ int httpGet_ServerTime(void)
 
 int httpPost_DeviceRegister(char* rsp)
 {
-	int Count_MaxNoResponse = 10;
+	static int Count_MaxTry = 0;
 	Cat1_return_t ret;
 	int len=0;
 
+	//一直注册不成功, 重试30次后重启xdk
+	Count_MaxTry++;
+	if(Count_MaxTry>30){
+		rebootXDK(__FUNCTION__);
+	}
 	memset(IMEI_BUF, 0, IMEI_BUF_LEN);
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
 	
@@ -2038,15 +1995,6 @@ int httpPost_FaultAlert(int int_alertType)
 	return 0;
 }
 
-/*get-set functions*/
-/*
-* @brief Allows to encode the provided content, leaving the output on
-* the buffer allocated by the caller.
-*
-* @param(void)
-*
-* @return(void)
-*/
 int httpPost_FaultRemove(int int_alertType)
 {
 	return 0;
@@ -2165,7 +2113,7 @@ fault 故障数组 Eg：[1,2,3]
 
 */
   	int status_direction = pElevatorStatus.EStatus_direction;
-	int status_inPosition = (pElevatorStatus.EStatus_inPosition)?0:1;
+	int status_inPosition = (pElevatorStatus.EStatus_inPosition==E_inPosition_NOFLAT)?0:1;
 	int status_currentFloor = pElevatorStatus.EStatus_currentFloor;
 	int status_doorStatus = pElevatorStatus.EStatus_doorStatus;
 	int status_havingPeople = pElevatorStatus.EStatus_havingPeople;
@@ -2303,14 +2251,9 @@ void handleElevatorFault(void)
 		if (getFaultState(faultNumbers) == 1)
 		{
 			count++;
-			if (faultNumbers == A_CLOSE_IN_POSITION) pElevatorStatus.EStatus_nowStatus = 2;
-			else if (faultNumbers == A_CLOSE_OUT_POSITION) pElevatorStatus.EStatus_nowStatus = 3;
-			else pElevatorStatus.EStatus_nowStatus = 1;
-			//pElevatorStatus.EStatus_nowStatus = 1;
+			pElevatorStatus.EStatus_nowStatus = E_nowStatus_FAULT;
 			if (getFaultSent(faultNumbers) == 0)
 			{
-				//if(faultNumbers != 12)
-				//{
 				if (httpPost_FaultAlert(faultNumbers) == 0)
 				{
 					setFaultSent(faultNumbers); //set only send success, or getFaultSent(faultNumbers) is still 0
@@ -2318,9 +2261,8 @@ void handleElevatorFault(void)
 				else
 					INFO("httpPost_FaultAlert failed!!\n");
 				currentFaultNumber = faultNumbers;//?? is it needed to put into above?
-				//}
 			}
-			//DEBUG("Info: ElevatorFault No. %d occurs!\n",faultNumbers);
+			DEBUG("Info: ElevatorFault No. %d occurs!\n",faultNumbers);
 		}
 		if (getFaultRemoveState(faultNumbers) == 1)
 		{
@@ -2332,14 +2274,14 @@ void handleElevatorFault(void)
 			else
 				INFO("httpPost_FaultRemove failed!!\n");
 
-			//DEBUG("Info: ElevatorFault No. %d has been removed^\n",faultNumbers);
+			DEBUG("Info: ElevatorFault No. %d has been removed^\n",faultNumbers);
 		}
 		faultNumbers--;
 	}
 	if (count == 0)
 	{
 		set_SStatus_LED(S_LED1_FAULT, 1); //black out
-		pElevatorStatus.EStatus_nowStatus = 0;
+		pElevatorStatus.EStatus_nowStatus = E_nowStatus_NORMAL;
 		currentFaultNumber = 0;
 	}
 	else
@@ -2359,7 +2301,7 @@ void getSensorsStatus(){
 	char* p=NULL;
 	int c=0;
 	
-    memset(UartBuf, 0, SOCKETBUFSIZE);
+    memset(UartBuf, 0, UARTBUFSIZE);
 
 #ifdef WIN_PLATFORM
 
@@ -2470,7 +2412,6 @@ void getSensorsStatus(){
 		//根据上下行传感器确定电梯运行方向
 		if(pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
 			&& pSensorsStatus.SStatus_inPositionDown == S_inPositionDown_OFF){
-			//pElevatorStatus.EStatus_inPosition = 1;//not flat floor
 			gettimeofday(&tv_speed2, NULL);
 			if ((timeIntervalUsec = tv_cmp(tv_speed2, tv_speed1)) > 0)
 			{
@@ -2479,46 +2420,42 @@ void getSensorsStatus(){
 			}
 		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
-			if(pElevatorStatus.EStatus_direction ==1){//up
+			if(pElevatorStatus.EStatus_direction ==E_direction_UP){//up
 				if (pElevatorStatus.EStatus_currentFloor < Lmax) pElevatorStatus.EStatus_currentFloor++;
 				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor++;
-			}else if(pElevatorStatus.EStatus_direction ==2){//down
+			}else if(pElevatorStatus.EStatus_direction ==E_direction_DOWN){//down
 				if (pElevatorStatus.EStatus_currentFloor > Lmin) pElevatorStatus.EStatus_currentFloor--;
 				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor--;
 			}
-			pElevatorStatus.EStatus_direction = 0; //0:stop, 1:up, 2:down
-			pElevatorStatus.EStatus_inPosition = 0;//flat floor
+			pElevatorStatus.EStatus_direction = E_direction_STOP; //0:stop, 1:up, 2:down
+			pElevatorStatus.EStatus_inPosition = E_inPosition_FLAT;//flat floor
 			gettimeofday(&tv_speed1, NULL);
 		
 		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_OFF){
 			gettimeofday(&tv_speed1, NULL);
-			pElevatorStatus.EStatus_direction = 2;//0:stop, 1:up, 2:down
-			pElevatorStatus.EStatus_inPosition = 1;//not flat floor
+			pElevatorStatus.EStatus_direction = E_direction_DOWN;//0:stop, 1:up, 2:down
+			pElevatorStatus.EStatus_inPosition = E_inPosition_NOFLAT;//not flat floor
 		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
 			gettimeofday(&tv_speed1, NULL);
-			pElevatorStatus.EStatus_inPosition = 1;//not flat floor
-			pElevatorStatus.EStatus_direction = 1;//0:stop, 1:up, 2:down
+			pElevatorStatus.EStatus_inPosition = E_inPosition_NOFLAT;//not flat floor
+			pElevatorStatus.EStatus_direction = E_direction_UP;//0:stop, 1:up, 2:down
 		}
 		
 		pElevatorStatus.EStatus_powerStatus = get_EStatus_powerStatus();
 		pElevatorStatus.EStatus_havingPeople = get_EStatus_havingPeople();
 		pElevatorStatus.EStatus_doorStatus = get_EStatus_doorStatus();
-		//pElevatorStatus.EStatus_inPosition = get_EStatus_inPosition();
 		
-		if(pSensorsStatus.SStatus_baseStation==1){
+		if(pSensorsStatus.SStatus_baseStation==S_baseStation_ON){
 			pElevatorStatus.EStatus_currentFloor = Lbase;
-			pElevatorStatus.EStatus_inPositionBase = 1; //基站
+			pElevatorStatus.EStatus_inPositionBase = E_inPositionBase_YES; //基站
 			currentFloorRefreshed = 1;
 		}
 		else{
-			pElevatorStatus.EStatus_inPositionBase = 0;//非基站
+			pElevatorStatus.EStatus_inPositionBase = E_inPositionBase_NO;//非基站
 			currentFloorRefreshed = 0;
 		}
-
-
-
 
 		//如果有多条io uart 数据, 循环处理
 		p+=TITEMLEN;
