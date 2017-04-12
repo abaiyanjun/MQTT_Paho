@@ -746,10 +746,12 @@ void timerEndAudio(void)
 
 void rebootXDK(char* where){
 	DEBUG("%s() where=%s\r\n", __FUNCTION__, where);
+#ifndef WIN_PLATFORM
 	//assert(0);
 	//利用看门狗超时重启xdk
     WDG_init(WDG_FREQ, 100);
 	for(;;){};
+#endif
 }
 
 void rebootCat1(char* where){
@@ -1191,7 +1193,8 @@ int httpPost_DeviceRegister(char* rsp)
 	}
 	memset(IMEI_BUF, 0, IMEI_BUF_LEN);
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
-	
+
+#ifndef WIN_PLATFORM
 	ret= cat1_get_IMEI(IMEI_BUF);
 	
 	DEBUG("%s IMEI_BUF=**%s**, ret=%d\n", __FUNCTION__, IMEI_BUF, ret);
@@ -1201,7 +1204,9 @@ int httpPost_DeviceRegister(char* rsp)
 	}else{
 		DEBUG("%s get IMEI fail.", __FUNCTION__);
 	}
-
+#else
+	sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"%s\"}"SEND, "mx_");
+#endif
 #ifdef DEVICE_ID_DEFAULT 
 	memset(socketCmdBuf,0,sizeof(socketCmdBuf));
 	sprintf(socketCmdBuf, SPRE"{\"type\":\"login\",\"eid\":\"%s\"}"SEND, DEVICE_ID_DEFAULT);
@@ -1271,6 +1276,7 @@ int httpPost_HeartBeat_C2S_rsp(char* rsp)
 	}
 	
 	DEBUG("%s() C2S_CPING_COUNT=%d", __FUNCTION__, C2S_CPING_COUNT);
+	return 0;
 }
 
 int httpPost_HeartBeat_S2C(char* rsp)
@@ -1622,7 +1628,7 @@ void getSensorsStatus(){
 #ifdef WIN_PLATFORM
 
     if(T06[i][0] != 0x00){
-        memcpy(UartBuf, T04[i], TITEMLEN);
+        memcpy(UartBuf, T06[i], TITEMLEN);
         i++;
     }else{
         i=0;
@@ -1750,13 +1756,21 @@ void getSensorsStatus(){
 		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_OFF){
 			gettimeofday(&tv_speed1, NULL);
-			pElevatorStatus.EStatus_direction = E_direction_DOWN;//0:stop, 1:up, 2:down
-			pElevatorStatus.EStatus_inPosition = E_inPosition_NOFLAT;//not flat floor
+			if(pElevatorStatus.EStatus_direction == E_direction_STOP){
+				pElevatorStatus.EStatus_direction = E_direction_DOWN;//0:stop, 1:up, 2:down
+				pElevatorStatus.EStatus_inPosition = E_inPosition_NOFLAT;//not flat floor
+			}else{
+				DEBUG("****** ERROR at %s #%d: previous NOT FLAT\n",__FUNCTION__, __LINE__);
+			}
 		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
 			gettimeofday(&tv_speed1, NULL);
-			pElevatorStatus.EStatus_direction = E_direction_UP;//0:stop, 1:up, 2:down
-			pElevatorStatus.EStatus_inPosition = E_inPosition_NOFLAT;//not flat floor
+			if(pElevatorStatus.EStatus_direction == E_direction_STOP){
+				pElevatorStatus.EStatus_direction = E_direction_UP;//0:stop, 1:up, 2:down
+				pElevatorStatus.EStatus_inPosition = E_inPosition_NOFLAT;//not flat floor
+			}else{
+				DEBUG("****** ERROR at %s #%d: previous NOT FLAT\n",__FUNCTION__, __LINE__);				
+			}
 		}
 		
 		pElevatorStatus.EStatus_powerStatus = get_EStatus_powerStatus();
