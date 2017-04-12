@@ -1,7 +1,39 @@
 //#include "stdafx.h"
-
 #undef WIN_PLATFORM
 //#define WIN_PLATFORM
+
+
+
+#define __DEBUG	//控制开关
+#ifdef __DEBUG
+#define DEBUG(format,...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
+//#define DEBUG(format,...) printf("File: "__FILE__", Fun: "__FUNCTION__": "format"\n", ##__VA_ARGS__)
+//#define DEBUG(format,...) printf("File: "__FILE__", Fun: __FUNCTION__: "format"\n",__FUNCTION__, ##__VA_ARGS__)
+#else
+#define DEBUG(format,...)
+#endif
+
+//#define __ERROR
+#ifdef __ERROR
+#else
+#endif
+
+#define __INFO
+#ifdef __INFO
+#define INFO(format,...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
+//#define INFO(format,...) printf("File: "__FILE__", __LINE__,"format"\n", __LINE__, ##__VA_ARGS__)  F
+//#define INFO(format,...) printf("Fun: "__FUNCTION__", __LINE__, "format"\n", __LINE__, ##__VA_ARGS__)
+#else
+#define INFO(format,...)
+#endif
+
+//#define __LOGING
+#ifdef __LOGING
+#else
+#endif
+
+
+
 
 #ifdef WIN_PLATFORM
 /* system header files */
@@ -89,8 +121,8 @@ void WDG_feedingWatchdog(void){
 
 #include "liftcheck_testdata.h"
 
-struct timeval tv_speed1;
-struct timeval tv_speed2;
+uint64_t tv_speed1;
+uint64_t tv_speed2;
 
 #ifdef WIN_PLATFORM
 
@@ -126,8 +158,9 @@ int gettimeofday(struct timeval * tp, struct timezone * tzp)
 #define LIFT_SLEEP_MS(ms)  Sleep(ms)
 
 #else
+//XDL platform
 
-#define   TIME_UNIT 1000
+#define   TIME_UNIT 1000  //1000ms
 
 
 int tv_cmp(struct timeval t1, struct timeval t2)
@@ -141,6 +174,9 @@ int _gettimeofday( struct timeval *tv, void *tzvp )
     uint64_t t = PowerMgt_GetSystemTimeMs();  // get uptime in microseconds
     tv->tv_sec = t / 1000;  // convert to seconds
     tv->tv_usec = ( t % 1000 ) ;  // get remaining microseconds
+
+	DEBUG("%s() t=%lld, sec=%d, usec=%d\r\n", __FUNCTION__, t, tv->tv_sec, tv->tv_usec);
+	
     return 0;  // return non-zero for error
 } // end _gettimeofday()
 
@@ -176,33 +212,6 @@ struct LIFT_queueSendData_S {
 typedef struct LIFT_queueSendData_S LIFT_queueSendData_T;
 
 
-#define __DEBUG	//控制开关
-#ifdef __DEBUG
-#define DEBUG(format,...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
-//#define DEBUG(format,...) printf("File: "__FILE__", Fun: "__FUNCTION__": "format"\n", ##__VA_ARGS__)
-//#define DEBUG(format,...) printf("File: "__FILE__", Fun: __FUNCTION__: "format"\n",__FUNCTION__, ##__VA_ARGS__)
-#else
-#define DEBUG(format,...)
-#endif
-
-//#define __ERROR
-#ifdef __ERROR
-#else
-#endif
-
-#define __INFO
-#ifdef __INFO
-#define INFO(format,...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
-//#define INFO(format,...) printf("File: "__FILE__", __LINE__,"format"\n", __LINE__, ##__VA_ARGS__)  F
-//#define INFO(format,...) printf("Fun: "__FUNCTION__", __LINE__, "format"\n", __LINE__, ##__VA_ARGS__)
-#else
-#define INFO(format,...)
-#endif
-
-//#define __LOGING
-#ifdef __LOGING
-#else
-#endif
 
 #define bit8 0x80
 #define bit7 0x40
@@ -494,7 +503,7 @@ int lastDoor = 9;
 int lastDirection = 9;
 int lastSStatus_havingPeople=0;
 
-float UpDownDistance=0.1;
+float UpDownDistance=3.0; //楼层间两个平层传感器距离 , 单位米
 
 float overSpeed_speed = 0;
 int overSpeed_directon = 0;
@@ -1618,7 +1627,7 @@ void handleElevatorStatus(void)
 void getSensorsStatus(){
     static int i=0;
     int j=0, k=0;
-	int timeIntervalUsec = 0;
+	int timeIntervalMsec = 0;
 	int len=0;
 	char* p=NULL;
 	int c=0;
@@ -1734,14 +1743,10 @@ void getSensorsStatus(){
 		//根据上下行传感器确定电梯运行方向
 		if(pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
 			&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_OFF){
-			gettimeofday(&tv_speed2, NULL);
-			if ((timeIntervalUsec = tv_cmp(tv_speed2, tv_speed1)) > 0)
-			{
-				pElevatorStatus.EStatus_speed = TIME_UNIT * UpDownDistance / timeIntervalUsec;
-				//DEBUG("**** speed is %f ****\n",pElevatorStatus.EStatus_speed);
-			}
+			//dummy 
 		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
+			//计算楼层
 			if(pElevatorStatus.EStatus_direction ==E_direction_UP){//up
 				if (pElevatorStatus.EStatus_currentFloor < Lmax) pElevatorStatus.EStatus_currentFloor++;
 				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor++;
@@ -1749,13 +1754,27 @@ void getSensorsStatus(){
 				if (pElevatorStatus.EStatus_currentFloor > Lmin) pElevatorStatus.EStatus_currentFloor--;
 				if (pElevatorStatus.EStatus_currentFloor == 0) pElevatorStatus.EStatus_currentFloor--;
 			}
+			//计算梯速
+			if(pElevatorStatus.EStatus_direction!=E_direction_STOP){//up
+				tv_speed2 = PowerMgt_GetSystemTimeMs();
+				timeIntervalMsec = tv_speed2 - tv_speed1;
+				//DEBUG("****** timeIntervalMsec=%d\n", timeIntervalMsec);
+				if (timeIntervalMsec > 0)
+				{
+					pElevatorStatus.EStatus_speed = TIME_UNIT * UpDownDistance / timeIntervalMsec;
+				}else{
+					pElevatorStatus.EStatus_speed = 0;
+				}
+			}else{
+				pElevatorStatus.EStatus_speed = 0;
+			}
+			DEBUG("speed is %f, timeIntervalMsec=%d\n", pElevatorStatus.EStatus_speed, timeIntervalMsec);
+			
 			pElevatorStatus.EStatus_direction = E_direction_STOP; //0:stop, 1:up, 2:down
 			pElevatorStatus.EStatus_inPosition = E_inPosition_FLAT;//flat floor
-			gettimeofday(&tv_speed1, NULL);
-		
+			tv_speed1 = PowerMgt_GetSystemTimeMs();
 		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_ON 
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_OFF){
-			gettimeofday(&tv_speed1, NULL);
 			if(pElevatorStatus.EStatus_direction == E_direction_STOP){
 				pElevatorStatus.EStatus_direction = E_direction_DOWN;//0:stop, 1:up, 2:down
 				pElevatorStatus.EStatus_inPosition = E_inPosition_NOFLAT;//not flat floor
@@ -1764,7 +1783,6 @@ void getSensorsStatus(){
 			}
 		}else if (pSensorsStatus.SStatus_inPositionUp==S_inPositionUp_OFF 
 				&& pSensorsStatus.SStatus_inPositionDown==S_inPositionDown_ON){
-			gettimeofday(&tv_speed1, NULL);
 			if(pElevatorStatus.EStatus_direction == E_direction_STOP){
 				pElevatorStatus.EStatus_direction = E_direction_UP;//0:stop, 1:up, 2:down
 				pElevatorStatus.EStatus_inPosition = E_inPosition_NOFLAT;//not flat floor
