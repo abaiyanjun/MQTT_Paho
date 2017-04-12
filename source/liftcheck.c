@@ -1853,7 +1853,7 @@ int CheckLiftStatus(void){
 		//sem_v(sem_d);
 
 		/*check every second*/
-		LIFT_SLEEP_MS(500);
+		LIFT_SLEEP_MS(100);
 	}
 	return 0;
 }
