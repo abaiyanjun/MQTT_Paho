@@ -175,10 +175,10 @@ int _gettimeofday( struct timeval *tv, void *tzvp )
     tv->tv_sec = t / 1000;  // convert to seconds
     tv->tv_usec = ( t % 1000 ) ;  // get remaining microseconds
 
-	DEBUG("%s() t=%lld, sec=%d, usec=%d\r\n", __FUNCTION__, t, tv->tv_sec, tv->tv_usec);
+	//DEBUG("%s() t=%lld, sec=%d, usec=%d\r\n", __FUNCTION__, t, tv->tv_sec, tv->tv_usec);
 	
     return 0;  // return non-zero for error
-} // end _gettimeofday()
+}
 
 #define LIFT_SLEEP_MS(ms)  vTaskDelay((portTickType) ms / portTICK_RATE_MS)
 
@@ -187,7 +187,6 @@ static xTimerHandle     liftCheckTimerHandle      = POINTER_NULL;  // timer hand
 static xTaskHandle      liftCheckTaskHandler      = POINTER_NULL;  // task handle for MQTT Client
 static xTaskHandle      liftWebServerTaskHandler  = POINTER_NULL;  // task handle for MQTT Client
 static xQueueHandle		liftMsgQueueHandle;
-
 
 
 #endif
@@ -203,6 +202,11 @@ char socketCmdRecvFragment[CMD_RECV];
 
 #define LIFT_SEND_QUEUE_SIZE 					(10)
 #define LIFT_SEND_MAX_PACKET_SIZE 				300  //(SEND_LEN)
+
+#define CHECK_STATUS_INTERVAL  100 // 每100ms读取串口
+#define SEND_HEAET_BEAT_TO_SERVER 100  // 每运行 ? 次发送一次心跳包到服务器
+
+
 
 struct LIFT_queueSendData_S {
 	uint32_t dataSize;
@@ -1805,6 +1809,10 @@ void getSensorsStatus(){
 			currentFloorRefreshed = 0;
 		}
 
+		//开始处理数据并上报服务器
+		checkElevatorFault();
+		httpPost_StatusFault(0);
+
 		//如果有多条io uart 数据, 循环处理
 		p+=TITEMLEN;
 	}
@@ -1818,7 +1826,7 @@ void getSensorsStatus(){
 
 
 int CheckLiftStatus(void){
- 	static int count=0;
+ 	static unsigned int count=0;
 	DEBUG("%s()\r\n", __FUNCTION__);
 
 	sensorsStatus_init();
@@ -1830,13 +1838,8 @@ int CheckLiftStatus(void){
 		count++;
 
 		DEBUG("**[%d]**\n", count);
-		
-		if(count<10){
-			LIFT_SLEEP_MS(100);
-			continue;
-		}
-	
-		if(count%60==0){
+			
+		if(count % SEND_HEAET_BEAT_TO_SERVER==0){
 			//send heart beat
 			DEBUG("send heart beat at %d\n", count);
 			httpPost_HeartBeat_C2S();
@@ -1846,14 +1849,12 @@ int CheckLiftStatus(void){
 		getSensorsStatus();
 
 		/*check faults when elevator not in a repairing*/
-		//sem_p(sem_d);
-		checkElevatorFault();
-		handleElevatorStatus();
-		httpPost_StatusFault(0);
-		//sem_v(sem_d);
+		//checkElevatorFault();
+		//handleElevatorStatus();
+		//httpPost_StatusFault(0);
 
 		/*check every second*/
-		LIFT_SLEEP_MS(100);
+		LIFT_SLEEP_MS(CHECK_STATUS_INTERVAL);
 	}
 	return 0;
 }
