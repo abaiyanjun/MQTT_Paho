@@ -204,7 +204,7 @@ char socketCmdRecvFragment[CMD_RECV];
 #define LIFT_SEND_MAX_PACKET_SIZE 				300  //(SEND_LEN)
 
 #define CHECK_STATUS_INTERVAL  100 // 每100ms读取串口
-#define SEND_HEAET_BEAT_TO_SERVER 100  // 每运行 ? 次发送一次心跳包到服务器
+#define SEND_HEART_BEAT_TO_SERVER 100  // 每运行 ? 次发送一次心跳包到服务器
 
 
 
@@ -600,7 +600,7 @@ int connectVideoLost = 1;
 #define S2C_NEED_LOGIN  "{\"type\":\"need_login\"}"
 #define S2C_PING  "{\"type\":\"ping\"}"
 #define C2S_PING  "{\"type\":\"ping\"}"
-#define S2C_KICk  "{\"type\":\"kick\",\"code\":"
+#define S2C_KICK  "{\"type\":\"kick\",\"code\":"
 #define S2C_CPING  "{\"type\":\"cping\"}"
 #define C2S_CPING  "{\"type\":\"cping\"}"
 #define C2S_LOGIN  "{\"type\":\"login\",\"eid\":\"%s\"}"
@@ -617,7 +617,7 @@ static char IMEI_BUF[IMEI_BUF_LEN];
 //#define DEVICE_ID_DEFAULT    "mx_863867025992437"  //测试临时使用的设备id
 
 
-#define CAT1_SEND_RETRY_MAX 10	//如果cat1发送识别, 最大重复发送次数, 超过则重启xdk系统
+#define CAT1_SEND_RETRY_MAX 3	//如果cat1发送识别, 最大重复发送次数, 超过则重启xdk系统
 #define DEVICE_REGISTER_WAIT 10000 //如果注册识别, 等待30秒重新注册
 #define HEART_BEAT_RATE         60000/portTICK_RATE_MS //如果60秒没有收到服务器的心跳包, 则重启xdk
 #define WATCH_DOG_TIMEOUT    300000 //5分钟看门狗超时
@@ -1381,7 +1381,7 @@ int httpPost_ProcessServerMsg(unsigned int t)
 			httpPost_HeartBeat_S2C(socketCmdRecvFragment);
 		}else if(strstr(socketCmdRecvFragment, S2C_LOGIN)){
 			httpPost_DeviceRegister_rsp(socketCmdRecvFragment);
-		}else if(strstr(socketCmdRecvFragment, S2C_KICk)){
+		}else if(strstr(socketCmdRecvFragment, S2C_KICK)){
 			httpPost_KickOff(socketCmdRecvFragment);
 		}else if(strstr(socketCmdRecvFragment, S2C_CPING)){
 			httpPost_HeartBeat_C2S_rsp(socketCmdRecvFragment);
@@ -1843,7 +1843,7 @@ int CheckLiftStatus(void){
 
 		DEBUG("**[%d]**\n", count);
 			
-		if(count % SEND_HEAET_BEAT_TO_SERVER==0){
+		if(count % SEND_HEART_BEAT_TO_SERVER==0){
 			//send heart beat
 			DEBUG("send heart beat at %d\n", count);
 			httpPost_HeartBeat_C2S();
@@ -2126,7 +2126,7 @@ void liftCheckClientInit(void)
 	} else {
 		DEBUG("LIFT USart_2 initialization FAILED\r\n");
 		//失败就延时后重启xdk
-		LIFT_SLEEP_MS(10000);
+		//LIFT_SLEEP_MS(10000);
 		rebootXDK(__FUNCTION__);
 		
 		return;
@@ -2148,7 +2148,7 @@ void liftCheckClientInit(void)
 		DEBUG("liftCheckTask initialization FAILED\r\n");
 		
 		//失败就延时后重启xdk
-		LIFT_SLEEP_MS(10000);
+		//LIFT_SLEEP_MS(10000);
 		rebootXDK(__FUNCTION__);
 		
 		return;
