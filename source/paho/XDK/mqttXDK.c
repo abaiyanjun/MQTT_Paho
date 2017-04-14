@@ -46,13 +46,11 @@
 /* own header files */
 #include "mqttXDK.h"
 
-//#define MQTT_BROKER_NAME    "113.59.226.244"  /**< MQTT Broker */
-//#define MQTT_PORT           1883                          /**< MQTT Port Number */
-#define MQTT_BROKER_NAME    "114.55.42.28"  /**< MQTT Broker */
-#define MQTT_PORT           26500                          /**< MQTT Port Number */
-#define WIFI_RESET_THRESHOLD 1800
-#define AT_BASE_LENGTH 27
-#define TIME_OUT   5000
+#define MQTT_BROKER_NAME    	"113.59.226.244"  				/**< MQTT Broker */
+#define MQTT_PORT           	1883                         	 /**< MQTT Port Number */
+#define WIFI_RESET_THRESHOLD 	1800
+#define AT_BASE_LENGTH 			27
+#define TIME_OUT   				5000
 
 int flag = 0;
 
@@ -189,12 +187,12 @@ int xdk_read(Network* n, uint8_t* buffer, int len, int timeout_ms) {
 	/***** when Socket is not connect, the dog timer will restart the xdk ******/
 	str = strstr(cmdRecv, "Socket");   
 	if(str != NULL)
-		while(1);
+		while(1);			//reset 2017-03-14
 
 	/***** when ERROR, the dog timer will restart the xdk ******/
 	str = strstr(cmdRecv, "ERROR");   
 	if( NULL != str)
-		while(1);
+		while(1);			//reset 2017-03-14
 
 	printf("-----------------2-------------------\r\n");
 
@@ -223,8 +221,6 @@ int xdk_read(Network* n, uint8_t* buffer, int len, int timeout_ms) {
 	printf("status is :\r\n%s\r\n",status);
 
 	if (!memcmp(status,"OK",sizeof("OK")-1)) {
-
-
 		char_to_hex(buffer,data,strlen(data));
 		#if 0
 		for (i = 0;i < strlen(data);i ++) {
@@ -234,7 +230,7 @@ int xdk_read(Network* n, uint8_t* buffer, int len, int timeout_ms) {
 		#endif
 	}
 
-	rc = 1;
+	rc = 1;		//Õý³£·µ»Ø 1
 	return rc;
 }
 
@@ -249,7 +245,6 @@ int xdk_read(Network *n, unsigned char *buffer, int len, int timeout_ms)
 
     SL_FD_ZERO(&fdset);
     SL_FD_SET(n->my_socket, &fdset);
-
 
     timeVal.tv_sec = 0;
     timeVal.tv_usec = timeout_ms * 1000;
@@ -302,7 +297,6 @@ int xdk_write(Network* n, uint8_t* buffer, int len, int timeout_ms) {
     //int rc = 0;
 
 	int i = 0;
-
 	uint8_t cmdRecv[1049];
 	char *token = NULL;  
 	char buff[1000]={0};

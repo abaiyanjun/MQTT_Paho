@@ -42,8 +42,6 @@
 #include "MQTTConnect.h"
 #include "cat1_API.h"
 
-#include "liftcheck.h"
-#include "lift_UartDev.h"
 
 /* constant definitions ***************************************************** */
 
@@ -129,7 +127,7 @@ static void clientRecv(MessageData* md)
 	printf("the water is %s\n",pointer+13);
 
 	rec_thr = atoi(pointer+13);
-	printf("the thre is :%ld\r\n",rec_thr);
+	printf("the thre is :%d\r\n",rec_thr);
 
 	memset(message->payload, 0x00, (int)message->payloadlen);
 	if(rec_thr<water_pum_threshlod_1 )// Need to switch on pumper
@@ -214,7 +212,6 @@ void clientStopTimer(void)
 void clientInit(void)
 {
 	Cat1_return_t ret;
-	Lift_return_t retlift;
 	/* Initialize Variables */
     int rc = 0;
     NewNetwork(&n);
@@ -230,8 +227,6 @@ void clientInit(void)
 	
     ConnectNetwork(&n, MQTT_BROKER_NAME, MQTT_PORT);
 #endif
-
-#if 0
     MQTTClient(&c, &n, 1000, buf, CLIENT_BUFF_SIZE, readbuf, CLIENT_BUFF_SIZE);
 
     /* Configure the MQTT Connection Data */
@@ -292,7 +287,6 @@ void clientInit(void)
     {
     	clientDeinit();
     }
-#endif
 
     return;
 }

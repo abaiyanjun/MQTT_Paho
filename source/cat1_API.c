@@ -1,12 +1,7 @@
-
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "cat1_API.h"
-
-
-
-
 
 #define DEBUG_TEST
 
@@ -23,7 +18,6 @@
 
 void  Characters_Converts_Hex(char *buf,char *src,int len)
 {
-	int i =0 ;
 	unsigned char temp,value;
 
 	char *dest;
@@ -53,7 +47,7 @@ void  Characters_Converts_Hex(char *buf,char *src,int len)
 
 void Characters_Converts_char(char* des, char *src,int length)
 {
-		int i,j;
+	int i,j;
 
 	for(j=0; j<length; j++)
 	{
@@ -93,7 +87,7 @@ void Characters_Converts_char(char* des, char *src,int length)
 Cat1_return_t cat1_health_check(void)
 {
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;
 	memset(cmdRecv,0,sizeof(cmdRecv));
 
@@ -105,13 +99,12 @@ Cat1_return_t cat1_health_check(void)
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
 		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		DBG("atCmd[%s],status[%s]\n", atCmd, status);
+		DBG(" cat1_health_check status[%s]\n", status);
 
 		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
 			return Cat1_STATUS_SUCCESS;
@@ -121,6 +114,8 @@ Cat1_return_t cat1_health_check(void)
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
+
+	return Cat1_STATUS_SUCCESS;
 }
 
 
@@ -140,8 +135,6 @@ Cat1_return_t cat1_server_init(uint8_t *ip, uint16_t *port)
 	int i = 0;
 	Cat1_return_t ret;
 	uint8_t cmdRecv[100];
-	uint8_t *atCmd;
-	uint8_t *status ;
 	uint8_t data1[100];
 	uint8_t data2[100];
 	char *token = NULL;
@@ -225,31 +218,29 @@ Cat1_return_t cat1_server_init(uint8_t *ip, uint16_t *port)
 	ret= send_AT_cmd(AT_CMD_OPEN,cmdRecv,CAT1_TIMEOUT);
 	printf("-----[ret=%d]cmdRecv--\n%s",ret,cmdRecv);
 
-
 	if (ret == Cat1_STATUS_TIMEOUT) {
-		
 		return ret;
-
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv---AT_CMD_OPEN----\n%s\n",cmdRecv);
+		DBG("-------cmdRecv---AT_CMD_OPEN----\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		DBG("atCmd[%s],status[%s]\n", atCmd, status);
+		DBG("cat1_server_init-------status[%s]\n", status);
 		DBG("ret2[%d]\n", ret);
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
-		}
+	}
+
+	return Cat1_STATUS_SUCCESS;
 }
 
 
@@ -259,48 +250,45 @@ Cat1_return_t cat1_server_init(uint8_t *ip, uint16_t *port)
  *
  * @return the cat1 State of value .>0 is error
  */
- 
-
 Cat1_return_t cat1_reset(void)
 {
 	int i = 0;
 	Cat1_return_t ret;
 	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
-	
-	do
-	{
-		ret=cat1_health_check();
+	memset(cmdRecv, 0, sizeof(cmdRecv));
+
+	do {
+		ret = cat1_health_check();
 		vTaskDelay(CAT1_DELAY_1000MS);
 		i++;
-	}while(ret != Cat1_STATUS_SUCCESS && i<10);
+	} while (ret != Cat1_STATUS_SUCCESS && i < 10);
 
-	ret = send_AT_cmd(AT_CMD_RESET,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_RESET);
+	ret = send_AT_cmd(AT_CMD_RESET, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_RESET);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 		return ret;
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
+		DBG("----cat1_reset---cmdRecv-------\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		DBG("atCmd[%s],status[%s]\n", atCmd, status);
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		DBG("status[%s]\n", status);
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
 
+	return Cat1_STATUS_SUCCESS;
 }
 
 
@@ -310,49 +298,46 @@ Cat1_return_t cat1_reset(void)
  *
  * @return the cat1 State of value .>0 is error
  */
- 
- 
-
 Cat1_return_t cat1_close(void)
 {
 	int i = 0;
 	Cat1_return_t ret;
 	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
+	memset(cmdRecv, 0, sizeof(cmdRecv));
 
-	do
-	{
-		ret=cat1_health_check();
+	do {
+		ret = cat1_health_check();
 		vTaskDelay(CAT1_DELAY_1000MS);
 		i++;
-	}while(ret != Cat1_STATUS_SUCCESS && i<10);
+	} while (ret != Cat1_STATUS_SUCCESS && i < 10);
 
-	ret = send_AT_cmd(AT_CMD_CLOSE,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_CLOSE);
+	ret = send_AT_cmd(AT_CMD_CLOSE, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_CLOSE);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 
 		return ret;
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
+		DBG("-------cmdRecv-------\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		DBG("atCmd[%s],status[%s]\n", atCmd, status);
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		DBG("cat1_close  status[%s]\n",  status);
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
+
+	return Cat1_STATUS_SUCCESS;
 }
 
 
@@ -364,20 +349,17 @@ Cat1_return_t cat1_close(void)
  *
  * @return the cat1 state of value. > 0 is error
  */
-
 Cat1_return_t cat1_send(uint16_t *buf, uint16_t len)
 {
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE]= {0};
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;  
-	uint8_t buffer[400]= {0};
-	uint8_t  data_buf[800] = {0};
+	uint8_t buffer[400];
+	uint8_t  data_buf[800];
 	memset(buffer,0,sizeof(buffer));
 	memset(cmdRecv,0,sizeof(cmdRecv));
 	memset(data_buf,0,sizeof(data_buf));
-	
 
-	
 	Characters_Converts_Hex(buffer,buf,len);
 
     sprintf(data_buf,AT_CMD_SENDDATA_CHARACTER,buffer);
@@ -398,14 +380,13 @@ Cat1_return_t cat1_send(uint16_t *buf, uint16_t len)
 
 			DBG("-------cmdRecv-------\n%s\n",cmdRecv);
 
-			token = strtok(cmdRecv, "\r\n");
-			char *atCmd = token;  
+			token = strtok((char*)cmdRecv, "\r\n");
 			if (token != NULL) {  
 				token = strtok(NULL, "\r\n");  
 			}  
 			char *status = token;  
 				
-			DBG("atCmd[%s],status[%s]\n", atCmd, status);
+			DBG("status[%s]\n",  status);
 			
 			if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
 				return Cat1_STATUS_SUCCESS;
@@ -415,7 +396,9 @@ Cat1_return_t cat1_send(uint16_t *buf, uint16_t len)
 				return Cat1_STATUS_INVALID_PARMS;
 			}
 		}
-	}	
+	}
+
+	return Cat1_STATUS_SUCCESS;
 }
 
 
@@ -428,57 +411,55 @@ Cat1_return_t cat1_send(uint16_t *buf, uint16_t len)
 *
 * @return the cat1 state of value. > 0 is error
 */
-
 Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 {	
 	Cat1_return_t ret;
-	uint16_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
+	uint16_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 
 	char *token = NULL;
 	char *token1 = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
+	memset(cmdRecv, 0, sizeof(cmdRecv));
 
-	ret = send_recv_cmd(AT_CMD_RECEICE_CHARACTER,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_RECEICE_CHARACTER);
+	ret = send_recv_cmd(AT_CMD_RECEICE_CHARACTER, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_RECEICE_CHARACTER);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 		return ret;
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
+		DBG("-------cmdRecv-------\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
-		   char *Cmddata=token;
+		char *Cmddata = token;
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		
-	
-		token1 = strtok(Cmddata,":");
-		char *Cmddata1=token1;
+
+		token1 = strtok((char*)Cmddata, ":");
 		if (token1 != NULL) {
 			token1 = strtok(NULL, "\r\n");
 		}
 		char *Cmddata2 = token1;
-		
-		Characters_Converts_char(buf,Cmddata2,strlen(Cmddata2));
-		*len = strlen(buf);
-		DBG("-------cmdRecv-------\n%s\n",Cmddata2);
 
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		Characters_Converts_char(buf, Cmddata2, strlen(Cmddata2));
+		*len = strlen(buf);
+		DBG("-------cmdRecv-------\n%s\n", Cmddata2);
+
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 
 	}
+
+	return Cat1_STATUS_SUCCESS;
 }
 
 /*
@@ -488,48 +469,45 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
  *
  * @return the cat1 state of value. > 0 is error
  */
-
- Cat1_return_t cat1_get_manufacturer(char *manufacturer)
- {
- 	
- 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
+Cat1_return_t cat1_get_manufacturer(char *manufacturer)
+{
+	Cat1_return_t ret;
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
+	memset(cmdRecv, 0, sizeof(cmdRecv));
 
-	
-
-	ret = send_AT_cmd(AT_CMD_MANUFACTUREER,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_MANUFACTUREER);
+	ret = send_AT_cmd(AT_CMD_MANUFACTUREER, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_MANUFACTUREER);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 		return ret;
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
+		DBG("-------cmdRecv-------\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
-		char *Cmddata=token;
+		char *Cmddata = token;
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		strcpy(manufacturer,Cmddata);
-		DBG("atCmd[%s]\nmanufacturer[%s]\nstatus[%s]",atCmd,manufacturer, status);
+		strcpy(manufacturer, Cmddata);
+		DBG("manufacturer[%s]\nstatus[%s]", manufacturer, status);
 
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
- }
+
+	return Cat1_STATUS_SUCCESS;
+}
 
 
 /*
@@ -539,51 +517,45 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
  *
  * @return the cat1 state of value. > 0 is error
  */
-
- Cat1_return_t cat1_get_revision(char * revision)
- {
- 	
- 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
+Cat1_return_t cat1_get_revision(char * revision)
+{
+	Cat1_return_t ret;
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
+	memset(cmdRecv, 0, sizeof(cmdRecv));
 
-	
-
-	ret = send_AT_cmd(AT_CMD_REVISION,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_REVISION);
+	ret = send_AT_cmd(AT_CMD_REVISION, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_REVISION);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 		return ret;
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
+		DBG("-------cmdRecv-------\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
-		char *Cmddata=token;
+		char *Cmddata = token;
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		strcpy(revision,Cmddata);
-		DBG("atCmd[%s]\nrevision[%s]\nstatus[%s]\n",atCmd,revision, status);
+		strcpy(revision, Cmddata);
+		DBG("revision[%s]\nstatus[%s]\n", revision, status);
 
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
- }
 
-
-
+	return Cat1_STATUS_SUCCESS;
+}
 
 /*
  * @brief  get the IMEI information from the cat1 module
@@ -592,46 +564,44 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
  *
  * @return the cat1 state of value. > 0 is error
  */
-
- Cat1_return_t cat1_get_IMEI(char * IMEI)
+Cat1_return_t cat1_get_IMEI(char * IMEI)
 {
-
- 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
+	Cat1_return_t ret;
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
-	
+	memset(cmdRecv, 0, sizeof(cmdRecv));
 
-	ret = send_AT_cmd(AT_CMD_IMEI,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_IMEI);
+	ret = send_AT_cmd(AT_CMD_IMEI, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_IMEI);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 		return ret;
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
+		DBG("-------cmdRecv-------\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
-		char *Cmddata=token;
+		char *Cmddata = token;
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		strcpy(IMEI,Cmddata);
-		DBG("atCmd[%s]\nrevision[%s]\nstatus[%s]\n",atCmd,IMEI, status);
+		strcpy(IMEI, Cmddata);
+		DBG("cat1_get_IMEI revision[%s]\nstatus[%s]\n", IMEI, status);
 
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
+
+	return Cat1_STATUS_SUCCESS;
 }
 
 
@@ -642,43 +612,41 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
  *
  * @return the cat1 state of value. > 0 is error
  */
-
- Cat1_return_t cat1_get_IMSI(char * IMSI)
+Cat1_return_t cat1_get_IMSI(char * IMSI)
 {
-	
-	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
-	char *token = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
 
-	
-	
-	ret = send_AT_cmd(AT_CMD_IMSI,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_IMSI);
+	Cat1_return_t ret;
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
+	char *token = NULL;
+	memset(cmdRecv, 0, sizeof(cmdRecv));
+
+	ret = send_AT_cmd(AT_CMD_IMSI, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_IMSI);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 		return ret;
 	} else if (ret == Cat1_STATUS_SUCCESS) {
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		DBG("-------cmdRecv-------\n%s\n", cmdRecv);
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
-		char *Cmddata=token;
+		char *Cmddata = token;
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		strcpy(IMSI,Cmddata);
-		DBG("atCmd[%s]\nrevision[%s]\nstatus[%s]\n",atCmd,IMSI, status);
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		strcpy(IMSI, Cmddata);
+		DBG("cat1_get_IMSI revision[%s]\nstatus[%s]\n", IMSI, status);
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
+
+	return Cat1_STATUS_SUCCESS;
 }
 
 
@@ -689,49 +657,45 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
  *
  * @return the cat1 state of value. > 0 is error
  */
-
- Cat1_return_t  cat1_get_SQ(char *SQ)
+Cat1_return_t cat1_get_SQ(char *SQ)
 {
-
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
+	memset(cmdRecv, 0, sizeof(cmdRecv));
 
-
-	
-	ret = send_AT_cmd(AT_CMD_CSQ,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_CSQ);
+	ret = send_AT_cmd(AT_CMD_CSQ, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_CSQ);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 		return ret;
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
+		DBG("-------cmdRecv-------\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
-		char *Cmddata=token;
+		char *Cmddata = token;
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
 		char *status = token;
-		strcpy(SQ,Cmddata);
-		DBG("atCmd[%s]\nrevision[%s]\nstatus[%s]\n",atCmd,Cmddata, status);
+		strcpy(SQ, Cmddata);
+		DBG("revision[%s]\nstatus[%s]\n", Cmddata, status);
 
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
-}
 
+	return Cat1_STATUS_SUCCESS;
+}
 
  /*
  * @brief  get the IP information from the cat1 module
@@ -740,28 +704,23 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
  *
  * @return the cat1 state of value. > 0 is error
  */
- 
- Cat1_return_t cat1_get_local_ip(char * IP)
+Cat1_return_t cat1_get_local_ip(char * IP)
 {
-	
 	Cat1_return_t ret;
-	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE] = {0};
+	uint8_t cmdRecv[Cat1_RX_BUFFER_SIZE];
 	char *token = NULL;
-	memset(cmdRecv,0,sizeof(cmdRecv));
+	memset(cmdRecv, 0, sizeof(cmdRecv));
 
-	
-	
-	ret = send_AT_cmd(AT_CMD_CGCONTRDP,cmdRecv,CAT1_TIMEOUT);
-	DBG("-------sendCmd-------\n%s",AT_CMD_CGCONTRDP);
+	ret = send_AT_cmd(AT_CMD_CGCONTRDP, cmdRecv, CAT1_TIMEOUT);
+	DBG("-------sendCmd-------\n%s", AT_CMD_CGCONTRDP);
 	if (ret == Cat1_STATUS_TIMEOUT) {
 		return ret;
 
 	} else if (ret == Cat1_STATUS_SUCCESS) {
 
-		DBG("-------cmdRecv-------\n%s\n",cmdRecv);
+		DBG("-------cmdRecv-------\n%s\n", cmdRecv);
 
-		token = strtok(cmdRecv, "\r\n");
-		char *atCmd = token;
+		token = strtok((char*)cmdRecv, "\r\n");
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
@@ -769,22 +728,18 @@ Cat1_return_t cat1_recv(uint16_t *buf, uint16_t *len)
 		if (token != NULL) {
 			token = strtok(NULL, "\r\n");
 		}
-		char *Cmddata=token;
-		if (token != NULL) {
-			token = strtok(NULL, "\r\n");
-		}
+
 		char *status = token;
-		strcpy(IP,cmd);
-		DBG("atCmd[%s]\ncmd[%s]\nCmddata[%s]\nstatus[%s]\n",atCmd,cmd,IP, status);
-		if (!memcmp(status,AT_CMD_OK,sizeof(AT_CMD_OK)-1)) {
+		strcpy(IP, cmd);
+		DBG("cmd[%s]\nCmddata[%s]\nstatus[%s]\n", cmd, IP, status);
+		if (!memcmp(status, AT_CMD_OK, sizeof(AT_CMD_OK) - 1)) {
 			return Cat1_STATUS_SUCCESS;
-		} else if (!memcmp(status,AT_CMD_ERROR,sizeof(AT_CMD_ERROR)-1)) {
+		} else if (!memcmp(status, AT_CMD_ERROR, sizeof(AT_CMD_ERROR) - 1)) {
 			return Cat1_STATUS_FAILED;
 		} else {
 			return Cat1_STATUS_INVALID_PARMS;
 		}
 	}
+
+	return Cat1_STATUS_SUCCESS;
 }
-
-
-  

@@ -28,8 +28,8 @@
 #define UART_NUMBER_ZERO                     UINT8_C(0)
 #define UNUSED_PARAMETER(P)                                     (P = P)
 
-#define CAT1_TIMEOUT					 UINT32_C(10000)
-#define CAT1_DELAY_1000MS				UINT32_C(1000)
+#define CAT1_TIMEOUT					(UINT32_C(10000))
+#define CAT1_DELAY_1000MS				(UINT32_C(1000))
 #define Cat1_TX_BUFFER_SIZE           	(UINT32_C(1492))
 #define Cat1_RX_BUFFER_SIZE           	(UINT32_C(1492))
 

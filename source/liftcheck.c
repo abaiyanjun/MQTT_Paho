@@ -227,6 +227,10 @@ typedef struct LIFT_queueSendData_S LIFT_queueSendData_T;
 #define bit1 0x01
 char* thisVersion = "161107"; //"1.0.34 bulid-160518";
 
+#define LIFT_WEB_SERVER_IP					"\"114.55.42.28\""
+#define	LIFT_WEB_SERVER_PORT				"\"26500\""
+
+
 /*ON means happened, OFF means not happened
 *the gpips have been pulled-up, if happened, gpios would be low
 *the sensor inputs also been pulled-up, witch means:
@@ -2089,9 +2093,7 @@ void liftCheckClientInit(void)
 
 	DEBUG("%s()\r\n", __FUNCTION__);
 
- 	ret=cat1_server_init(CAT1_SERVER_IP,CAT1_SERVER_PORT);
-
- 	//ret=cat1_server_init("121.196.219.49","26500");
+ 	ret=cat1_server_init(LIFT_WEB_SERVER_IP,LIFT_WEB_SERVER_PORT);
 	if (ret != Cat1_STATUS_SUCCESS )
 	{
 		DEBUG("cat1 init failed\r\n");

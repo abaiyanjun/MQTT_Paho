@@ -45,7 +45,15 @@
 #define TIMEBASE            UINT32_C(0)          /* Macro used to define the Timebase for the ADC */
 #define ADCFREQUENCY        UINT32_C(9000000)    /* Macro Used to define the frequency of the ADC Clock */
 
+enum SENSOR
+{
+    TEMP,
+    HUMP,
+    LIGHT,
+};
 
+typedef enum SENSOR SENSOR_TYPE;
+static SENSOR_TYPE SENSOR1 = TEMP;
 
 /* constant definitions ***************************************************** */
 
@@ -226,14 +234,46 @@ void sensorStreamData(xTimerHandle pvParameters)
 	LightSensor_readLuxData        (xdkLightSensor_MAX44009_Handle  	, &_lgtData);
 	Magnetometer_readXyzTeslaData  (xdkMagnetometer_BMM150_Handle       , &_magData);
 	_timestamp = PowerMgt_GetSystemTime();
-#if 0
+
 	sensorStreamBuffer.length = 0;
 	DBG("the sensor length is %d\r\n",sensorStreamBuffer.length);
 
+#if 1
+	switch(SENSOR1)
+	{
+			case TEMP:
+				sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "F4B85E3E433C 200 %ld 0\r\n", _envData.temperature/1000);
+				SENSOR1 = HUMP;
+				break;
+			case HUMP:
+				sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "F4B85E3E433C 201 %ld 0\r\n", _envData.humidity);
+				SENSOR1 = LIGHT;
+				break;
+			case LIGHT:
+				sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "F4B85E3E433C 202 %d 0\r\n", _lgtData/1000);
+				SENSOR1 = TEMP;
+				break;
+			default:
+				break;
+		}
+#endif
+#if 0
 	/* Write the sensor data into the Stream Buffer in JSON Format */
-	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "Device: %s\n",  "XDK110");
-	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "Name: %s\n", MQTT_CLIENT_ID);
-	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "Timestamp: %d\n",  _timestamp);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "{\"device\":\"%s\",",  "XDK110");
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"clientid\":\"%s\",", MQTT_CLIENT_ID);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"mac\":\"%s\",", MAC_ADDRESS);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"status\":[\"status\":\"0\",\"direction\":\"0\",\"floor\":\"0\",\"parking\":\"0\",\"closed\":\"0\",\"hoisting\":\"0\",\"squatting\":\"0\",\"open\":\"0\",\"speeding\":\"0\",\"outsider\":\"0\"],");
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"data\":[\"acc_x\":\"%-+5ld\",", _accelBMA280Data.xAxisData);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"acc_y\":\"%-+5ld\",", _accelBMA280Data.yAxisData);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"acc_z\":\"%-+5ld\",", _accelBMA280Data.zAxisData);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"mag_x\":\"%-+5ld\",", _magData.xAxisData);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"mag_y\":\"%-+5ld\",", _magData.yAxisData);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"mag_z\":\"%-+5ld\",", _magData.zAxisData);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"pre\":\"%d\",", _envData.pressure);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"temp\":\"%d\"]\n", _envData.temperature);
+	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "}");
+#endif
+#if 0
 	if (ACCEL_EN == ENABLED) {
 		sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "acc (mG):\n");
 		sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "     x = %-+5ld\n", _accelBMA280Data.xAxisData);
@@ -270,12 +310,12 @@ void sensorStreamData(xTimerHandle pvParameters)
         _waterData = 0xFFF & ADC_DataScanGet(ADC0);
 		sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "water_depth= %ld\n", _waterData);
 	}
+#endif
 
 	printf("temp (mCelsius) = %d\n", _envData.temperature);
 	printf("pressure (Pascal) = %d\n", _envData.pressure);
 	printf("humidity (%%rh) = %d\n", _envData.humidity);
 	DBG("the sensor length is %d\r\n",sensorStreamBuffer.length);
-#endif
 }
 
 /**

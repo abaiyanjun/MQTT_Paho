@@ -45,8 +45,8 @@
 #include "netapp.h"
 #include "socket.h"
 
-#define XDK
-#define DOG 1		 //huyuxiang
+#define 		XDK
+#define 		DOG 1		 //huyuxiang
 //#define DEBUG_TEST   //huyuxiang
 #ifdef DEBUG_TEST
 	#define DBG(x,args ...) printf("[DEBUG]"x"\t[%d]\r\n",##args,__LINE__)

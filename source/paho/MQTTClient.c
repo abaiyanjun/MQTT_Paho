@@ -16,6 +16,11 @@
 
 #include "MQTTClient.h"
 
+//add 2017-03-14
+#define 	BUFFER_OVERFLOW 	 -2
+#define 	FAILURE 			 -1
+#define 	SUCCESS				  0
+
 void NewMessageData(MessageData* md, MQTTString* aTopicName, MQTTMessage* aMessgage) {
     md->topicName = aTopicName;
     md->message = aMessgage;
@@ -80,11 +85,11 @@ int decodePacket(Client* c, int* value, int timeout)
     *value = 0;
     do
     {
-        int rc = MQTTPACKET_READ_ERROR;
+        //int rc = MQTTPACKET_READ_ERROR;
 
         if (++len > MAX_NO_OF_REMAINING_LENGTH_BYTES)
         {
-            rc = MQTTPACKET_READ_ERROR; /* bad data */
+           // rc = MQTTPACKET_READ_ERROR; /* bad data */
             goto exit;
         }
         //rc = c->ipstack->mqttread(c->ipstack, &i, 1, timeout); 

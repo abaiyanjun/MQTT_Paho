@@ -49,14 +49,10 @@
 static uint8_t Cat1_ser2RxBuf_ma[Cat1_RX_BUFFER_SIZE];
 static uint8_t Cat1_ser2TxBuf_ma[Cat1_TX_BUFFER_SIZE];
 
-/*test API timer*/
-static xTimerHandle	 usrTestTime  = 0;
-static xTimerHandle	 testApi  = 0;
-
 
 SER_device_t Cat1_uartHandle;
 /*****************************************************************************/
-/*    DATA TYPE DECLARATIONS                                               
+/*    DATA TYPE DECLARATIONS    */
 /*****************************************************************************/
 static SER_init_t Cat1_uartInit =
     {
@@ -143,7 +139,6 @@ static Cat1_return_t serial_data_byte_pop(uint8_t *recvData)
     uint8_t receiveBuffer;
     SER_errorCode_t retVal = SER_SUCCESS;
     uint32_t reminingBytes;
-    Cat1_return_t status;
 
     /* Reads the required number of bytes from internal buffer */
     retVal = SER_serialRead(&Cat1_uartHandle, &reminingBytes, &receiveBuffer, 1);

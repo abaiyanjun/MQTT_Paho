@@ -18,7 +18,7 @@ static xTaskHandle      cat1TaskHandler  =   POINTER_NULL;  // task handle for M
 void cat1_data_send_test(void)
 {
 	Cat1_return_t ret;
-	char *buf = "#10#{\"type\":\"login\",\"eid\":\"mx12345678\"}#13#";
+	char buf[60]="test demo ...";
 
 	ret = cat1_send(buf,strlen(buf));
 	if (ret == Cat1_STATUS_SUCCESS) {
@@ -81,7 +81,7 @@ Cat1_return_t cat1_demo(void)
 		CLIENT_TASK_PRIORITY,
 		&cat1TaskHandler
 	);
-
+	
 	if (rc < 0) {
 		printf("cat1task create failed.!\r\n");
 	}

@@ -28,52 +28,49 @@
 /* Config interface declaration ********************************************** */
 
 /* Config type and macro definitions */
-#define XDK_PAHO_DEMO_REVISION       "0.2.0"
+#define 	XDK_PAHO_DEMO_REVISION       "0.2.0"
 
-#define NUMBER_UINT8_ZERO		     UINT8_C(0)     /**< Zero value */
-#define NUMBER_UINT32_ZERO 		     UINT32_C(0)    /**< Zero value */
-#define NUMBER_UINT16_ZERO 		     UINT16_C(0)    /**< Zero value */
-#define NUMBER_INT16_ZERO 		     INT16_C(0)     /**< Zero value */
+#define 	NUMBER_UINT8_ZERO		     UINT8_C(0)     /**< Zero value */
+#define 	NUMBER_UINT32_ZERO 		     UINT32_C(0)    /**< Zero value */
+#define 	NUMBER_UINT16_ZERO 		     UINT16_C(0)    /**< Zero value */
+#define 	NUMBER_INT16_ZERO 		     INT16_C(0)     /**< Zero value */
 
-#define POINTER_NULL 			     NULL          /**< ZERO value for pointers */
+#define 	POINTER_NULL 			     NULL          /**< ZERO value for pointers */
 
-#define TIMER_AUTORELOAD_ON          1             /**< Auto reload timer */
-#define TIMER_AUTORELOAD_OFF         0             /**< One Shot Timer */
+#define 	TIMER_AUTORELOAD_ON          1             /**< Auto reload timer */
+#define 	TIMER_AUTORELOAD_OFF         0             /**< One Shot Timer */
 
-#define ENABLED         1
-#define DISABLED        0
+#define 	ENABLED         1
+#define 	DISABLED        0
 
 #warning Provide Default WLAN and MQTT Configuration Here
 // Default Network Configuration Settings
-#define	WLAN_SSID	  		"xiangcdc2107467746ddd2"      	  /**< WLAN SSID Name */
+#define	WLAN_SSID	  		"xiang"      	  /**< WLAN SSID Name */
 #define	WLAN_PWD	  		"xiang123"          /**< WLAN PWD */
-#define	MQTT_CLIENT_ID	    "pub_cdc2107467746ddd2"            /**< MQTT Client ID */
-//#define MQTT_BROKER_NAME    "113.59.226.244"  /**< MQTT Broker */
-//#define MQTT_PORT           1883                          /**< MQTT Port Number */
-#define MQTT_BROKER_NAME    "114.55.42.28"  /**< MQTT Broker */
-#define MQTT_PORT           26500                          /**< MQTT Port Number */
+#define	MQTT_CLIENT_ID	    "pub_v1"            /**< MQTT Client ID */
+#define MAC_ADDRESS			"34ba9a3fc933"
+#define MQTT_BROKER_NAME    "113.59.226.244"  /**< MQTT Broker */
+#define MQTT_PORT           1883                          /**< MQTT Port Number */
 
 /***cat1 server ip and port**/
-//#define CAT1_SERVER_IP					"\"113.59.226.244\""
-//#define	CAT1_SERVER_PORT				"\"1883\""
-#define CAT1_SERVER_IP					"\"114.55.42.28\""
-#define	CAT1_SERVER_PORT				"\"26500\""
+#define 	CAT1_SERVER_IP					"\"113.59.226.244\""
+#define		CAT1_SERVER_PORT				"\"1883\""
 
 
 // Default Data Configuration Settings
-#define STREAM_RATE         1000/portTICK_RATE_MS /**< Stream Data Rate in MS */
-//#define STREAM_RATE         4000
-#define ACCEL_EN            ENABLED               /**< Accelerometer Data Enable */
-#define GYRO_EN             ENABLED               /**< Gyroscope Data Enable */
-#define MAG_EN              ENABLED               /**< Magnetometer Data Enable */
-#define ENV_EN              ENABLED               /**< Environmental Data Enable */
-#define LIGHT_EN            ENABLED               /**< Ambient Light Data Enable */
-#define ADC_EN            	ENABLED               /**< Ambient water Data Enable */
+#define 	STREAM_RATE         1000/portTICK_RATE_MS /**< Stream Data Rate in MS */
+//#define 	STREAM_RATE         4000
+#define 	ACCEL_EN            ENABLED               /**< Accelerometer Data Enable */
+#define 	GYRO_EN             ENABLED               /**< Gyroscope Data Enable */
+#define 	MAG_EN              ENABLED               /**< Magnetometer Data Enable */
+#define 	ENV_EN              ENABLED               /**< Environmental Data Enable */
+#define 	LIGHT_EN            ENABLED               /**< Ambient Light Data Enable */
+#define 	ADC_EN            	ENABLED               /**< Ambient water Data Enable */
 
 
-#define WDG_FREQ            1000
-#define WDG_TIMEOUT         2000
-
+#define 	WDG_FREQ            1000
+//#define		WDG_TIMEOUT         2000
+#define		WDG_TIMEOUT         10000
 /* global function prototype declarations */
 
 /* global variable declarations */
