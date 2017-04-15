@@ -340,24 +340,7 @@ typedef uint16_t UINT16;
 //typedef unsigned short int UINT16
 typedef unsigned char UCHAR8;
 
-/*Macros*/
-#define POSTURL "http://api.elevatorcloud.com"//"http://www.xiami.com/member/login"
-#define POSTURLTEST "api.elevatorcloud.com"
-//#define POSTFIELDS "email=myemail@163.com&password=mypassword&autologin=1&submit=登 录&type="
-//#define FILENAME "curlposttest.log"
 
-
-//#define HttpServerHost http:\/\/api.elevatorcloud.com
-//#define RegisterAdrr /register
-//#define IPSTR ""//"114.80.200.79"-->114.55.42.28
-//#define POET 80
-
-//#define IPSTR2 "220.191.224.88"
-//#define IPSTR3 "192.168.2.105"
-//#define PORT2 9000
-//#define PORT3 9200
-#define PORT_IO 13000
-#define PORT_VIDEO 15000
 
 #define UARTBUFSIZE 1024
 
@@ -496,8 +479,6 @@ int currentFaultNumber = 0;
 int faultTypeIndi[27] = { 0 };
 int removeFaultTypeIndi[27] = { 0 };
 int faultSentIndi[27] = { 0 };
-//PT_ElevatorStatus *pElevatorStatus = NULL;
-//PT_SensorsStatus *pSensorsStatus = NULL;
 struct T_ElevatorStatus pElevatorStatus;
 struct T_SensorsStatus pSensorsStatus;
 
@@ -1130,6 +1111,73 @@ void checkElevatorFault(void)
 			removeFault(A_OPEN_WITHOUT_STOPPIN);
 		}
 
+		//A_POWER_CUT 		9//停电；
+		if(status_powerStatus == E_powerStatus_POWER) //normal
+		{
+			removeFault(A_POWER_CUT);
+		}else //lost main power
+		{
+			setFault(A_POWER_CUT);
+			DEBUG("Fault: A_POWER_CUT!\n");
+		}
+		
+		//A_CLOSE_FAULT 	12//关门故障；**
+		if(status_doorStatus == E_doorStatus_OPEN) //open
+		{
+			if(timerRead(Tm) == 0) timerStart(Tm);
+			if((timerRead(Tm) >0)&&(timerCheck(Tm)>= timerGetThreshhold(Tm)))
+			{
+				setFault(A_CLOSE_FAULT);
+				DEBUG("Fault: A_CLOSE_FAULT!\n");
+			}
+		}
+		else
+		{
+			timerEnd(Tm);
+			//removeFault(A_CLOSE_FAULT);
+		}
+
+		//A_OVERSPEED 		3//超速；**
+		if(status_speed <=(((float)Sk)/10)*(((float)Sn)/10))
+		{
+			count_normalSpeedFloor = status_currentFloor;
+			if(status_speed >= 0.9*((float)Sk)/10)
+			{
+				if(lastNormalSpeed == 0)
+				{
+					lastNormalSpeed = 1; //mark NormalSpeed for the first time
+				}
+				else
+				{
+					removeFault(A_OVERSPEED); //it was NormalSpeed last time
+					lastNormalSpeed = 0;
+				}
+				/*
+				if(count_normalSpeed = 0)
+				count_normalSpeed++
+				if(count_normalSpeed = 2)
+
+				count_normalSpeed
+				*/
+			}
+			else
+				lastNormalSpeed = 0;
+		}
+		else
+		{
+			count_overSpeedFloor = status_currentFloor;
+			lastNormalSpeed = 0;
+		}
+		if(count_overSpeedFloor != 0)//'cause there is no floor 0
+	 	{
+			if((count_overSpeedFloor - count_normalSpeedFloor >= Sl) ||(count_normalSpeedFloor - count_overSpeedFloor >= Sl))
+			{
+				count_normalSpeedFloor = 0;
+				count_overSpeedFloor = 0;
+				setFault(A_OVERSPEED);
+			}
+		}
+		
 		/*check if fualts should be removed*/
 		if(status_inPosition == E_inPosition_FLAT)
 		{
@@ -1157,6 +1205,7 @@ void checkElevatorFault(void)
 		if(status_doorStatus == E_doorStatus_CLOSE && status_inPosition == E_inPosition_NOFLAT) //close and move
 		{
 			removeFault(A_CLOSE_FAULT);
+			timerEnd(Tm);			
 		}
 
 		if(status_inPosition == E_inPosition_FLAT && status_doorStatus == E_doorStatus_OPEN)
@@ -1675,16 +1724,16 @@ void getSensorsStatus(){
 		{
 			switch (k)
 			{
-			case 9: //00: 代表第1输入口的状态变化，建议上行传感器
+			case 11: //00: 代表第1输入口的状态变化，建议上行传感器
 				printf("  [UP]");
 				break;
-			case 10: //00: 代表第2输入口的状态变化，建议接下行传感器
+			case 12: //00: 代表第2输入口的状态变化，建议接下行传感器
 				printf("  [DOWN]");
 				break;
-			case 11: //00: 代表第3输入口的状态变化，建议接基站校验传感器
+			case 9: //00: 代表第3输入口的状态变化，建议接基站校验传感器
 				printf("  [BASE]");
 				break;
-			case 12: //00: 代表第4输入口的状态变化，建议接门开关传感器
+			case 10: //00: 代表第4输入口的状态变化，建议接门开关传感器
 				printf("  [DOOR]");
 				break;
 			case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
@@ -1708,16 +1757,16 @@ void getSensorsStatus(){
 		for(j=9;j<15;j++){
 			switch (j)
 			{
-			case 9: //00: 代表第1输入口的状态变化，建议上行传感器
+			case 11: //00: 代表第1输入口的状态变化，建议上行传感器
 				pSensorsStatus.SStatus_inPositionUp = *(p+j);
 				break;
-			case 10: //00: 代表第2输入口的状态变化，建议接下行传感器
+			case 12: //00: 代表第2输入口的状态变化，建议接下行传感器
 				pSensorsStatus.SStatus_inPositionDown = *(p+j);
 				break;
-			case 11: //00: 代表第3输入口的状态变化，建议接基站校验传感器
+			case 9: //00: 代表第3输入口的状态变化，建议接基站校验传感器
 				pSensorsStatus.SStatus_baseStation = *(p+j);
 				break;
-			case 12: //00: 代表第4输入口的状态变化，建议接门开关传感器
+			case 10: //00: 代表第4输入口的状态变化，建议接门开关传感器
 				pSensorsStatus.SStatus_doorOpen = *(p+j);
 				break;
 			case 13: //00: 代表第5输入口的状态变化，建议接人感传感器
@@ -1863,7 +1912,25 @@ int CheckLiftStatus(void){
 	return 0;
 }
 
+void configParam(void){
+/*
+int timerThreshhold[14] =  { 20, 20, 20, 100, 20, 45, 50, 20, 50, 20, 20, 20, 60, 10 }; 
+int Sk = 18;//额定梯速,m/s
+int Sn = 12; //超速倍数定义1.2*1.8=2.2
+int Lbase = 1; //number of base floor
+int Lmax = 100; //number of max floor
+int Lmin = -1; //number of min floor
+float UpDownDistance=3.0; //楼层间两个平层传感器距离 , 单位米
+
+
+*/
+}
+
+
 //=============================================================
+
+
+
 #ifdef WIN_PLATFORM
 //这里是windows模拟使用. 
 HANDLE event;
