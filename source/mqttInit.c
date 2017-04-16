@@ -64,7 +64,7 @@ void appInitSystem(xTimerHandle xTimer)
     (void) (xTimer);
 
     /* Initialize Sensors */
-    //byj sensorInit();
+    sensorInit();
 
     /* Initialize WiFi */
     //wifiInit();

@@ -173,6 +173,10 @@ int send_to_socket(char* sendbuf, int sendlen, char* recvbuf, int* recvlen);
 代码说明
 1 当同一个设备ID有其他设备登陆时，会收到此信息，意味着有相同设备登陆，自身被踢出
 2 服务端收到了错误的客户端数据，认为为非法请求，将客户端踢出。
+
+
+
+
 客户端 -> 服务端
 心跳包
 传输内容：{"type":"cping"}

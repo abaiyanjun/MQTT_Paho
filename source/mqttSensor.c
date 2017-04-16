@@ -83,7 +83,7 @@ static void sensorInitializeAccel(void)
 
 	_accelReturnValue_BMA280_S = Accelerometer_init(xdkAccelerometers_BMA280_Handle);
 	if(RETCODE_SUCCESS != _accelReturnValue_BMA280_S) {
-		printf("accelerometerInit BMA280 failed = %ld \r\n",_accelReturnValue_BMA280_S);
+		DEBUG("accelerometerInit BMA280 failed = %ld \r\n",_accelReturnValue_BMA280_S);
 	}
 }
 
@@ -96,7 +96,7 @@ static void sensorInitializeGyro(void)
 
 	_gyroG160ReturnValue = Gyroscope_init(xdkGyroscope_BMG160_Handle);
 	if(RETCODE_SUCCESS != _gyroG160ReturnValue) {
-		printf("gyroscopeInit BMG160 failed = %ld \r\n",_gyroG160ReturnValue);
+		DEBUG("gyroscopeInit BMG160 failed = %ld \r\n",_gyroG160ReturnValue);
 	}
 }
 
@@ -109,7 +109,7 @@ static void sensorInitializeMag(void)
 
 	_magnetoReturnValue = Magnetometer_init(xdkMagnetometer_BMM150_Handle);
 	if(RETCODE_SUCCESS != _magnetoReturnValue) {
-		printf("magnetometerInit BMM150 failed = %ld \r\n",_magnetoReturnValue);
+		DEBUG("magnetometerInit BMM150 failed = %ld \r\n",_magnetoReturnValue);
 	}
 
 	if(RETCODE_SUCCESS == _magnetoReturnValue  ) {
@@ -117,7 +117,7 @@ static void sensorInitializeMag(void)
 	}
 
 	if(RETCODE_SUCCESS != _magnetoReturnValue) {
-		printf("sensorPostInitMagSensor BMM150 failed = %ld \r\n",_magnetoReturnValue);
+		DEBUG("sensorPostInitMagSensor BMM150 failed = %ld \r\n",_magnetoReturnValue);
 	}
 }
 
@@ -130,7 +130,7 @@ static void sensorInitializeLight(void)
 
 	_lgtReturnValue = LightSensor_init(xdkLightSensor_MAX44009_Handle);
 	if(RETCODE_SUCCESS != _lgtReturnValue) {
-		printf("lightsensorInit MAX09 failed = %ld \r\n",_lgtReturnValue);
+		DEBUG("lightsensorInit MAX09 failed = %ld \r\n",_lgtReturnValue);
 	}
 
 	if(RETCODE_SUCCESS == _lgtReturnValue) {
@@ -138,7 +138,7 @@ static void sensorInitializeLight(void)
 	}
 
 	if(RETCODE_SUCCESS != _lgtReturnValue) {
-		printf("sensorPostInitLightSensor MAX09 failed = %ld \r\n",_lgtReturnValue);
+		DEBUG("sensorPostInitLightSensor MAX09 failed = %ld \r\n",_lgtReturnValue);
 	}
 }
 
@@ -178,7 +178,7 @@ static void sensorInitializeEnv(void)
 
 	_envReturnValue = Environmental_init(xdkEnvironmental_BME280_Handle);
 	if(RETCODE_SUCCESS != _envReturnValue) {
-		printf("environmentalInit BME280 failed = %ld \r\n",_envReturnValue);
+		DEBUG("environmentalInit BME280 failed = %ld \r\n",_envReturnValue);
 	}
 }
 
@@ -236,7 +236,7 @@ void sensorStreamData(xTimerHandle pvParameters)
 	_timestamp = PowerMgt_GetSystemTime();
 
 	sensorStreamBuffer.length = 0;
-	DBG("the sensor length is %d\r\n",sensorStreamBuffer.length);
+	DEBUG("the sensor length is %d\r\n",sensorStreamBuffer.length);
 
 #if 1
 	switch(SENSOR1)
@@ -257,7 +257,7 @@ void sensorStreamData(xTimerHandle pvParameters)
 				break;
 		}
 #endif
-#if 0
+#if 1
 	/* Write the sensor data into the Stream Buffer in JSON Format */
 	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "{\"device\":\"%s\",",  "XDK110");
 	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"clientid\":\"%s\",", MQTT_CLIENT_ID);
@@ -273,7 +273,7 @@ void sensorStreamData(xTimerHandle pvParameters)
 	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "\"temp\":\"%d\"]\n", _envData.temperature);
 	sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "}");
 #endif
-#if 0
+#if 1
 	if (ACCEL_EN == ENABLED) {
 		sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "acc (mG):\n");
 		sensorStreamBuffer.length += sprintf(sensorStreamBuffer.data + sensorStreamBuffer.length, "     x = %-+5ld\n", _accelBMA280Data.xAxisData);
@@ -312,10 +312,10 @@ void sensorStreamData(xTimerHandle pvParameters)
 	}
 #endif
 
-	printf("temp (mCelsius) = %d\n", _envData.temperature);
-	printf("pressure (Pascal) = %d\n", _envData.pressure);
-	printf("humidity (%%rh) = %d\n", _envData.humidity);
-	DBG("the sensor length is %d\r\n",sensorStreamBuffer.length);
+	DEBUG("temp (mCelsius) = %d\n", _envData.temperature);
+	DEBUG("pressure (Pascal) = %d\n", _envData.pressure);
+	DEBUG("humidity (%%rh) = %d\n", _envData.humidity);
+	DEBUG("the sensor length is %d:**%s**\r\n",sensorStreamBuffer.length, sensorStreamBuffer.data);
 }
 
 /**

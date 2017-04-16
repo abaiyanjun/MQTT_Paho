@@ -187,6 +187,7 @@ static xTimerHandle     liftCheckTimerHandle      = POINTER_NULL;  // timer hand
 static xTaskHandle      liftCheckTaskHandler      = POINTER_NULL;  // task handle for MQTT Client
 static xTaskHandle      liftWebServerTaskHandler  = POINTER_NULL;  // task handle for MQTT Client
 static xQueueHandle		liftMsgQueueHandle;
+static xTimerHandle     liftSensorTimerHandle      = POINTER_NULL;  // timer handle for data stream
 
 
 #endif
@@ -602,6 +603,7 @@ static char IMEI_BUF[IMEI_BUF_LEN];
 #define DEVICE_REGISTER_WAIT 10000 //如果注册识别, 等待30秒重新注册
 #define HEART_BEAT_RATE         60000/portTICK_RATE_MS //如果60秒没有收到服务器的心跳包, 则重启xdk
 #define WATCH_DOG_TIMEOUT    300000 //5分钟看门狗超时
+#define SENSOR_RATE         100/portTICK_RATE_MS //如果60秒没有收到服务器的心跳包, 则重启xdk
 
 #define SECOND 1
 #define USECOND 0
@@ -1878,7 +1880,7 @@ void getSensorsStatus(){
 //=================================================================
 
 
-int CheckLiftStatus(void){
+int CheckLiftStatus(void *pvParameters){
  	static unsigned int count=0;
 	DEBUG("%s()\r\n", __FUNCTION__);
 
@@ -1899,6 +1901,7 @@ int CheckLiftStatus(void){
 		}
 		
 		/*refresh status of all sensors*/
+		sensorStreamData(pvParameters);
 		getSensorsStatus();
 
 		/*check faults when elevator not in a repairing*/
@@ -1939,7 +1942,7 @@ HANDLE mutex;
 DWORD WINAPI checkStatusTask(LPVOID pM)
 {
 	INFO("checkStatusTask start^\n");
-    CheckLiftStatus();
+    CheckLiftStatus(NULL);
 	return 1;
 }
 
@@ -2146,7 +2149,7 @@ void liftCheckTask(void *pvParameters)
  	static int count=0;
 	DEBUG("%s()\r\n", __FUNCTION__);
 	
-	CheckLiftStatus();
+	CheckLiftStatus(pvParameters);
 	
 	return;
 }
@@ -2206,6 +2209,15 @@ void liftCheckClientInit(void)
 			TIMER_AUTORELOAD_ON,
 			NULL,
 			liftCheckHeartBeatTimer);
+
+	/* Create Live Data Stream Timer */
+    liftSensorTimerHandle = xTimerCreate(
+			(const char * const) "Data Stream",
+			SENSOR_RATE,
+			TIMER_AUTORELOAD_ON,
+			NULL,
+			sensorStreamData);
+	
 
     rc = xTaskCreate(liftCheckTask, (const char * const) "LiftCheckTask",
                     		1024*5, NULL, 1, &liftCheckTaskHandler);

@@ -31,8 +31,15 @@
 #include "FreeRTOS.h"
 #include "timers.h"
 
+#define __DEBUG	//¿ØÖÆ¿ª¹Ø
+#ifdef __DEBUG
+#define DEBUG(format,...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
+#else
+#define DEBUG(format,...)
+#endif
+
 /* Sensor type and macro definitions */
-#define SENSOR_DATA_BUF_SIZE    1024
+#define SENSOR_DATA_BUF_SIZE    1024*5
 
 typedef struct {
 	uint32_t length;
