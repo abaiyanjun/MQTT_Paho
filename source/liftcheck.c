@@ -1227,6 +1227,12 @@ void checkElevatorFault(void)
 			outpositionCalled = 0;
 		}
 
+		//平层开关门一次, 解除超速故障
+		if((lastDoor == E_doorStatus_CLOSE)&&(status_doorStatus == E_doorStatus_OPEN && status_inPosition == E_inPosition_FLAT))
+		{
+			removeFault(A_OVERSPEED);
+		}
+
 		lastPosition = status_inPosition;
 		lastDoor = status_doorStatus;
 		lastDirection = status_direction;
